@@ -10,6 +10,15 @@ export const formatCurrency = (value: number): string => {
   }).format(value);
 };
 
+// Format MMK currency
+export const formatMMK = (value: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'MMK',
+    minimumFractionDigits: 0
+  }).format(value);
+};
+
 // Format large numbers with abbreviation (K, M, B)
 export const formatNumber = (num: number): string => {
   if (num >= 1000000000) {
@@ -58,127 +67,19 @@ export const calculatePortfolioValue = (assets: CryptoAsset[], positions: Positi
   return spotValue + futuresValue;
 };
 
-// Calculate position PnL
-export const calculatePositionPnL = (position: Position, currentPrice: number): number => {
-  const priceChange = currentPrice - position.entryPrice;
-  const multiplier = position.type === 'long' ? 1 : -1;
-  return (priceChange * position.size * position.leverage * multiplier);
-};
-
-// Calculate liquidation price
-export const calculateLiquidationPrice = (
-  type: 'long' | 'short',
-  entryPrice: number,
-  leverage: number,
-  margin: number,
-  size: number
-): number => {
-  const maintenanceMargin = margin * 0.5; // 50% maintenance margin requirement
-  if (type === 'long') {
-    return entryPrice * (1 - (1 / leverage) + (maintenanceMargin / size));
-  } else {
-    return entryPrice * (1 + (1 / leverage) - (maintenanceMargin / size));
-  }
-};
-
-// Open a new position
-export const openPosition = (
-  user: User,
-  crypto: Cryptocurrency,
-  type: 'long' | 'short',
-  leverage: number,
-  margin: number
-): User | null => {
-  if (user.marginBalance < margin) {
-    return null;
-  }
-
-  const size = margin * leverage;
-  const liquidationPrice = calculateLiquidationPrice(
-    type,
-    crypto.price,
-    leverage,
-    margin,
-    size
-  );
-
-  const position: Position = {
-    id: uuidv4(),
-    coinId: crypto.id,
-    coinName: crypto.name,
-    coinSymbol: crypto.symbol,
-    type,
-    leverage,
-    size,
-    entryPrice: crypto.price,
-    liquidationPrice,
-    margin,
-    pnl: 0,
-    timestamp: Date.now(),
-    isOpen: true
-  };
-
-  const transaction: Transaction = {
-    id: uuidv4(),
-    coinId: crypto.id,
-    coinName: crypto.name,
-    coinSymbol: crypto.symbol,
-    amount: size,
-    price: crypto.price,
-    total: margin,
-    type,
-    timestamp: Date.now()
-  };
-
-  return {
-    ...user,
-    marginBalance: user.marginBalance - margin,
-    positions: [...user.positions, position],
-    transactions: [transaction, ...user.transactions]
-  };
-};
-
-// Close a position
-export const closePosition = (
-  user: User,
-  position: Position,
-  currentPrice: number
-): User => {
-  const pnl = calculatePositionPnL(position, currentPrice);
-  
-  const transaction: Transaction = {
-    id: uuidv4(),
-    coinId: position.coinId,
-    coinName: position.coinName,
-    coinSymbol: position.coinSymbol,
-    amount: position.size,
-    price: currentPrice,
-    total: position.margin + pnl,
-    type: 'close',
-    timestamp: Date.now()
-  };
-
-  const updatedPositions = user.positions.map(p => 
-    p.id === position.id ? { ...p, isOpen: false, pnl } : p
-  );
-
-  return {
-    ...user,
-    marginBalance: user.marginBalance + position.margin + pnl,
-    positions: updatedPositions,
-    transactions: [transaction, ...user.transactions]
-  };
-};
-
-// Process a buy transaction
+// Process a buy transaction using USDT
 export const processBuyTransaction = (
   user: User,
   crypto: Cryptocurrency,
   amount: number
 ): User | null => {
+  if (crypto.symbol === 'USDT') {
+    return null; // USDT purchases must be done through fiat
+  }
+
   const total = amount * crypto.price;
   
-  if (user.balance < total) {
+  if (user.usdtBalance < total) {
     return null;
   }
   
@@ -217,18 +118,22 @@ export const processBuyTransaction = (
   
   return {
     ...user,
-    balance: user.balance - total,
+    usdtBalance: user.usdtBalance - total,
     assets: updatedAssets,
     transactions: [transaction, ...user.transactions]
   };
 };
 
-// Process a sell transaction
+// Process a sell transaction to receive USDT
 export const processSellTransaction = (
   user: User,
   crypto: Cryptocurrency,
   amount: number
 ): User | null => {
+  if (crypto.symbol === 'USDT') {
+    return null; // USDT sales must be done through fiat
+  }
+
   const assetIndex = user.assets.findIndex(asset => asset.coinId === crypto.id);
   if (assetIndex === -1 || user.assets[assetIndex].amount < amount) {
     return null;
@@ -263,8 +168,71 @@ export const processSellTransaction = (
   
   return {
     ...user,
-    balance: user.balance + total,
+    usdtBalance: user.usdtBalance + total,
     assets: updatedAssets,
+    transactions: [transaction, ...user.transactions]
+  };
+};
+
+// Process USDT purchase with local currency (MMK)
+export const processUSDTPurchase = (
+  user: User,
+  amount: number,
+  mmkRate: number
+): User | null => {
+  const mmkAmount = amount * mmkRate;
+  if (user.balance < mmkAmount) {
+    return null;
+  }
+
+  const transaction: Transaction = {
+    id: uuidv4(),
+    coinId: 'tether',
+    coinName: 'Tether',
+    coinSymbol: 'USDT',
+    amount,
+    price: 1,
+    total: amount,
+    type: 'buy',
+    timestamp: Date.now()
+  };
+
+  return {
+    ...user,
+    balance: user.balance - mmkAmount,
+    usdtBalance: user.usdtBalance + amount,
+    transactions: [transaction, ...user.transactions]
+  };
+};
+
+// Process USDT sale for local currency (MMK)
+export const processUSDTSale = (
+  user: User,
+  amount: number,
+  mmkRate: number
+): User | null => {
+  if (user.usdtBalance < amount) {
+    return null;
+  }
+
+  const mmkAmount = amount * mmkRate;
+  
+  const transaction: Transaction = {
+    id: uuidv4(),
+    coinId: 'tether',
+    coinName: 'Tether',
+    coinSymbol: 'USDT',
+    amount,
+    price: 1,
+    total: amount,
+    type: 'sell',
+    timestamp: Date.now()
+  };
+
+  return {
+    ...user,
+    balance: user.balance + mmkAmount,
+    usdtBalance: user.usdtBalance - amount,
     transactions: [transaction, ...user.transactions]
   };
 };
