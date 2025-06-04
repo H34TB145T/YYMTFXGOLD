@@ -14,11 +14,11 @@ export const sendVerificationEmail = async (email: string, token: string) => {
   const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
 
   const mailOptions = {
-    from: process.env.SMTP_FROM || 'noreply@freddys.com',
+    from: process.env.SMTP_FROM || 'noreply@fxgold.com',
     to: email,
     subject: 'Verify your email address',
     html: `
-      <h1>Welcome to Freddy's Crypto Trading!</h1>
+      <h1>Welcome to FxGold Trading!</h1>
       <p>Please click the link below to verify your email address:</p>
       <a href="${verificationUrl}">${verificationUrl}</a>
       <p>This link will expire in 24 hours.</p>
@@ -38,7 +38,7 @@ export const sendPasswordResetEmail = async (email: string, token: string) => {
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
 
   const mailOptions = {
-    from: process.env.SMTP_FROM || 'noreply@freddys.com',
+    from: process.env.SMTP_FROM || 'noreply@fxgold.com',
     to: email,
     subject: 'Reset your password',
     html: `
@@ -65,7 +65,7 @@ export const sendOrderConfirmationEmail = async (
   orderDetails: any
 ) => {
   const mailOptions = {
-    from: process.env.SMTP_FROM || 'noreply@freddys.com',
+    from: process.env.SMTP_FROM || 'noreply@fxgold.com',
     to: email,
     subject: `${orderType.toUpperCase()} Order Confirmation`,
     html: `

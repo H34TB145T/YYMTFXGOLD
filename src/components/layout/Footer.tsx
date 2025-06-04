@@ -9,10 +9,10 @@ const Footer: React.FC = () => {
           <div className="mb-4 md:mb-0">
             <div className="flex items-center">
               <Wallet className="h-6 w-6 text-emerald-500" />
-              <span className="ml-2 text-lg font-bold">Freddy's</span>
+              <span className="ml-2 text-lg font-bold">FxGold</span>
             </div>
             <p className="text-gray-400 text-sm mt-1">
-              Cryptocurrency Trading Simulator
+              Cryptocurrency Trading Platform
             </p>
           </div>
           
@@ -75,7 +75,7 @@ const Footer: React.FC = () => {
         
         <div className="mt-8 pt-6 border-t border-gray-800 text-center">
           <p className="text-gray-400 text-sm">
-            &copy; {new Date().getFullYear()} Freddy's Crypto Trading. All rights reserved.
+            &copy; {new Date().getFullYear()} FxGold Trading. All rights reserved.
             <br />
             <span className="text-xs">This is a demo application. No real money is involved.</span>
           </p>

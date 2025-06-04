@@ -38,7 +38,7 @@ const Navbar: React.FC = () => {
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
               <Wallet className="h-8 w-8 text-emerald-500" />
-              <span className="ml-2 text-xl font-bold text-white">Freddy's</span>
+              <span className="ml-2 text-xl font-bold text-white">FxGold</span>
             </Link>
           </div>
           
