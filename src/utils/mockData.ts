@@ -3,16 +3,6 @@ import { Cryptocurrency } from '../types';
 // Mock data for top cryptocurrencies including USDT
 export const cryptoData: Cryptocurrency[] = [
   {
-    id: 'tether',
-    name: 'Tether',
-    symbol: 'USDT',
-    price: 1.00,
-    change24h: 0.01,
-    image: 'https://assets.coingecko.com/coins/images/325/large/Tether.png',
-    marketCap: 95000000000,
-    rank: 1
-  },
-  {
     id: 'bitcoin',
     name: 'Bitcoin',
     symbol: 'BTC',
@@ -20,7 +10,7 @@ export const cryptoData: Cryptocurrency[] = [
     change24h: 2.5,
     image: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
     marketCap: 2078000000000,
-    rank: 2
+    rank: 1
   },
   {
     id: 'ethereum',
@@ -30,6 +20,16 @@ export const cryptoData: Cryptocurrency[] = [
     change24h: 1.8,
     image: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png',
     marketCap: 720000000000,
+    rank: 2
+  },
+  {
+    id: 'tether',
+    name: 'Tether',
+    symbol: 'USDT',
+    price: 1.00,
+    change24h: 0.01,
+    image: 'https://assets.coingecko.com/coins/images/325/large/Tether.png',
+    marketCap: 95000000000,
     rank: 3
   },
   {
