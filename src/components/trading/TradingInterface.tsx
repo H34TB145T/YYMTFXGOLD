@@ -3,7 +3,14 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCrypto } from '../../contexts/CryptoContext';
 import { TradingMode } from '../../types';
-import { formatCurrency, formatCryptoAmount } from '../../utils/helpers';
+import { 
+  formatCurrency, 
+  formatCryptoAmount, 
+  processBuyTransaction, 
+  processSellTransaction,
+  openPosition,
+  calculateLiquidationPrice
+} from '../../utils/helpers';
 import PriceChart from '../common/PriceChart';
 import LoadingSpinner from '../common/LoadingSpinner';
 import SpotTrading from './SpotTrading';
@@ -43,6 +50,30 @@ const TradingInterface: React.FC = () => {
 
   const handleTradingModeChange = (mode: 'spot' | 'futures') => {
     setTradingMode({ type: mode });
+  };
+
+  const handleSpotTrade = (type: 'buy' | 'sell', amount: number) => {
+    if (!user || !selectedCrypto) return;
+
+    let updatedUser;
+    if (type === 'buy') {
+      updatedUser = processBuyTransaction(user, selectedCrypto, amount);
+    } else {
+      updatedUser = processSellTransaction(user, selectedCrypto, amount);
+    }
+
+    if (updatedUser) {
+      updateUser(updatedUser);
+    }
+  };
+
+  const handleFuturesTrade = (type: 'long' | 'short', amount: number, leverage: number) => {
+    if (!user || !selectedCrypto) return;
+
+    const updatedUser = openPosition(user, selectedCrypto, type, leverage, amount);
+    if (updatedUser) {
+      updateUser(updatedUser);
+    }
   };
 
   const refreshData = () => {
@@ -184,16 +215,12 @@ const TradingInterface: React.FC = () => {
               tradingMode.type === 'spot' ? (
                 <SpotTrading
                   selectedCrypto={selectedCrypto}
-                  onTrade={(type, amount) => {
-                    // Handle spot trade
-                  }}
+                  onTrade={handleSpotTrade}
                 />
               ) : (
                 <FuturesTrading
                   selectedCrypto={selectedCrypto}
-                  onTrade={(type, amount, leverage) => {
-                    // Handle futures trade
-                  }}
+                  onTrade={handleFuturesTrade}
                 />
               )
             )}
