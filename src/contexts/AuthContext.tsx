@@ -56,15 +56,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const register = async (email: string, password: string, fullName: string, phone: string) => {
-    const result = await authRegister(email, password, fullName, phone);
-    if (result.success && result.token) {
-      localStorage.setItem('token', result.token);
-      const currentUser = getCurrentUser(result.token);
-      if (currentUser) {
-        setUser(currentUser);
+    try {
+      const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
+      
+      if (users.some((u: User) => u.email === email)) {
+        return { success: false, message: 'Email already registered' };
       }
+      
+      const newUser: User = {
+        id: uuidv4(),
+        email,
+        full_name: fullName,
+        phone,
+        role: 'user',
+        is_verified: false,
+        balance: 0,
+        usdtBalance: 0,
+        marginBalance: 0,
+        assets: [],
+        transactions: [],
+        positions: [],
+        wallet_address: generateUSDTWalletAddress()
+      };
+      
+      users.push(newUser);
+      localStorage.setItem('freddyUsers', JSON.stringify(users));
+      
+      return { 
+        success: true, 
+        message: 'Registration successful',
+        token: `demo-token-${newUser.id}`
+      };
+    } catch (error) {
+      console.error('Registration error:', error);
+      return { success: false, message: 'Registration failed' };
     }
-    return result;
+  };
+
+  const generateUSDTWalletAddress = (): string => {
+    return `0x${uuidv4().replace(/-/g, '')}`;
   };
 
   const logout = () => {

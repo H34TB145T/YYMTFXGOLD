@@ -253,3 +253,85 @@ export const shouldLiquidatePosition = (position: Position, currentPrice: number
     ? currentPrice <= position.liquidationPrice
     : currentPrice >= position.liquidationPrice;
 };
+
+// Process USDT deposit
+export const processUSDTDeposit = (
+  user: User,
+  amount: number,
+  network: string
+): User | null => {
+  if (amount <= 0) return null;
+
+  const transaction: Transaction = {
+    id: uuidv4(),
+    coinId: 'tether',
+    coinName: 'Tether',
+    coinSymbol: 'USDT',
+    amount,
+    price: 1,
+    total: amount,
+    type: 'deposit',
+    timestamp: Date.now()
+  };
+
+  return {
+    ...user,
+    usdtBalance: user.usdtBalance + amount,
+    transactions: [transaction, ...user.transactions]
+  };
+};
+
+// Process USDT withdrawal
+export const processUSDTWithdrawal = (
+  user: User,
+  amount: number,
+  network: string,
+  address: string
+): User | null => {
+  if (user.usdtBalance < amount) return null;
+
+  const transaction: Transaction = {
+    id: uuidv4(),
+    coinId: 'tether',
+    coinName: 'Tether',
+    coinSymbol: 'USDT',
+    amount,
+    price: 1,
+    total: amount,
+    type: 'withdrawal',
+    timestamp: Date.now()
+  };
+
+  return {
+    ...user,
+    usdtBalance: user.usdtBalance - amount,
+    transactions: [transaction, ...user.transactions]
+  };
+};
+
+// Process USDT transfer
+export const processUSDTTransfer = (
+  user: User,
+  amount: number,
+  recipientAddress: string
+): User | null => {
+  if (user.usdtBalance < amount) return null;
+
+  const transaction: Transaction = {
+    id: uuidv4(),
+    coinId: 'tether',
+    coinName: 'Tether',
+    coinSymbol: 'USDT',
+    amount,
+    price: 1,
+    total: amount,
+    type: 'transfer',
+    timestamp: Date.now()
+  };
+
+  return {
+    ...user,
+    usdtBalance: user.usdtBalance - amount,
+    transactions: [transaction, ...user.transactions]
+  };
+};
