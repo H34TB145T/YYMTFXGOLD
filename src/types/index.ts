@@ -6,6 +6,11 @@ export interface User {
   role: 'user' | 'admin';
   is_verified: boolean;
   wallet_address?: string;
+  balance: number;
+  marginBalance: number;
+  assets: CryptoAsset[];
+  transactions: Transaction[];
+  positions: Position[];
 }
 
 export interface Order {
@@ -47,4 +52,40 @@ export interface Cryptocurrency {
   image: string;
   marketCap: number;
   rank: number;
+}
+
+export interface CryptoAsset {
+  coinId: string;
+  symbol: string;
+  name: string;
+  amount: number;
+  purchasePrice: number;
+}
+
+export interface Transaction {
+  id: string;
+  coinId: string;
+  coinName: string;
+  coinSymbol: string;
+  amount: number;
+  price: number;
+  total: number;
+  type: 'buy' | 'sell' | 'close';
+  timestamp: number;
+}
+
+export interface Position {
+  id: string;
+  coinId: string;
+  coinName: string;
+  coinSymbol: string;
+  type: 'long' | 'short';
+  leverage: number;
+  size: number;
+  entryPrice: number;
+  liquidationPrice: number;
+  margin: number;
+  pnl: number;
+  timestamp: number;
+  isOpen: boolean;
 }

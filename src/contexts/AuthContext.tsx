@@ -9,6 +9,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
   register: (email: string, password: string, fullName: string, phone: string) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
+  updateUser: (updatedUser: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -71,6 +72,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
   };
 
+  const updateUser = (updatedUser: User) => {
+    setUser(updatedUser);
+    const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
+    const updatedUsers = users.map((u: User) => u.id === updatedUser.id ? updatedUser : u);
+    localStorage.setItem('freddyUsers', JSON.stringify(updatedUsers));
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -78,7 +86,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       loading,
       login, 
       register, 
-      logout
+      logout,
+      updateUser
     }}>
       {children}
     </AuthContext.Provider>

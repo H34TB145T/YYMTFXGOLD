@@ -51,7 +51,12 @@ export const register = async (
       full_name: fullName,
       phone,
       role: 'user',
-      is_verified: false
+      is_verified: false,
+      balance: 1000, // Initial balance
+      marginBalance: 1000, // Initial margin balance
+      assets: [], // Empty initial assets
+      transactions: [], // Empty initial transactions
+      positions: [] // Empty initial positions
     };
     
     users.push(newUser);
@@ -72,7 +77,21 @@ export const getCurrentUser = (token: string): User | null => {
   try {
     const userId = token.replace('demo-token-', '');
     const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
-    return users.find((u: User) => u.id === userId) || null;
+    const user = users.find((u: User) => u.id === userId);
+    
+    if (user) {
+      // Ensure all required properties exist with default values
+      return {
+        ...user,
+        balance: user.balance ?? 1000,
+        marginBalance: user.marginBalance ?? 1000,
+        assets: user.assets ?? [],
+        transactions: user.transactions ?? [],
+        positions: user.positions ?? []
+      };
+    }
+    
+    return null;
   } catch (error) {
     console.error('Get current user error:', error);
     return null;
