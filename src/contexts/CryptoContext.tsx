@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Cryptocurrency } from '../types';
-import { cryptoData } from '../utils/mockData';
+import { getTop20Cryptocurrencies } from '../services/marketcapApi';
 
 interface CryptoContextType {
   cryptocurrencies: Cryptocurrency[];
@@ -27,41 +27,23 @@ export const CryptoProvider: React.FC<CryptoProviderProps> = ({ children }) => {
   const [cryptocurrencies, setCryptocurrencies] = useState<Cryptocurrency[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchCryptoData = () => {
+  const fetchCryptoData = async () => {
     setLoading(true);
-    // In a real app, this would be an API call to get real cryptocurrency data
-    // Using mock data for demo purposes
-    setTimeout(() => {
-      setCryptocurrencies(cryptoData);
+    try {
+      const data = await getTop20Cryptocurrencies();
+      setCryptocurrencies(data);
+    } catch (error) {
+      console.error('Error fetching cryptocurrency data:', error);
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   useEffect(() => {
     fetchCryptoData();
     
-    // Simulate price updates every 10 seconds with more realistic market behavior
-    const interval = setInterval(() => {
-      setCryptocurrencies(prevCryptos => 
-        prevCryptos.map(crypto => {
-          // Generate more realistic price movements
-          const volatility = crypto.price * 0.02; // 2% max price movement
-          const randomChange = (Math.random() - 0.5) * volatility;
-          const newPrice = crypto.price + randomChange;
-          
-          // Calculate new 24h change with some momentum
-          const momentum = Math.random() > 0.7 ? 1 : -1;
-          const changeAdjustment = (Math.random() * 0.5) * momentum;
-          const newChange = Math.max(Math.min(crypto.change24h + changeAdjustment, 15), -15);
-          
-          return {
-            ...crypto,
-            price: newPrice,
-            change24h: newChange,
-          };
-        })
-      );
-    }, 10000);
+    // Fetch new data every 30 seconds
+    const interval = setInterval(fetchCryptoData, 30000);
     
     return () => clearInterval(interval);
   }, []);

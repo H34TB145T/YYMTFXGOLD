@@ -6,20 +6,20 @@ export const cryptoData: Cryptocurrency[] = [
     id: 'bitcoin',
     name: 'Bitcoin',
     symbol: 'BTC',
-    price: 65000,
+    price: 105546,
     change24h: 2.5,
     image: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
-    marketCap: 1278000000000,
+    marketCap: 2078000000000,
     rank: 1
   },
   {
     id: 'ethereum',
     name: 'Ethereum',
     symbol: 'ETH',
-    price: 3500,
+    price: 5890,
     change24h: 1.8,
     image: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png',
-    marketCap: 420000000000,
+    marketCap: 720000000000,
     rank: 2
   },
   {
