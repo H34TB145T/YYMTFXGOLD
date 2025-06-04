@@ -6,18 +6,18 @@ import { ArrowRight, Wallet, TrendingUp, Shield, Coins } from 'lucide-react';
 const featuresData = [
   {
     icon: <Wallet className="h-6 w-6 text-emerald-500" />,
-    title: 'Virtual Wallet',
-    description: 'Start with $1,000 in virtual currency to begin your trading journey without any real financial risk.'
+    title: 'Secure Trading',
+    description: 'Trade cryptocurrencies securely with our advanced trading platform.'
   },
   {
     icon: <TrendingUp className="h-6 w-6 text-emerald-500" />,
     title: 'Real-Time Trading',
-    description: 'Experience the excitement of cryptocurrency trading with real-time price simulations and market data.'
+    description: 'Experience cryptocurrency trading with real-time price data and market information.'
   },
   {
     icon: <Shield className="h-6 w-6 text-emerald-500" />,
-    title: 'Risk-Free Learning',
-    description: 'Learn the ins and outs of crypto trading in a safe environment before venturing into real markets.'
+    title: 'Advanced Security',
+    description: 'Your assets are protected with industry-leading security measures and encryption.'
   },
   {
     icon: <Coins className="h-6 w-6 text-emerald-500" />,
@@ -38,11 +38,11 @@ const Home: React.FC = () => {
             <div className="text-center md:text-left md:max-w-3xl">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight">
                 <span className="block">Trade Cryptocurrency</span>
-                <span className="block text-emerald-500">Without the Risk</span>
+                <span className="block text-emerald-500">With Confidence</span>
               </h1>
               <p className="mt-6 text-xl text-gray-300 max-w-3xl">
-                Welcome to Freddy's – where you can learn crypto trading with $1,000 in virtual money. 
-                Practice buying and selling cryptocurrencies in a realistic environment without risking real funds.
+                Welcome to FxGold – your trusted platform for cryptocurrency trading. 
+                Experience professional-grade tools and real-time market data to execute your trading strategies.
               </p>
               <div className="mt-10 flex flex-col sm:flex-row sm:justify-center md:justify-start gap-4">
                 {isAuthenticated ? (
@@ -81,10 +81,10 @@ const Home: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-white">
-              Why Freddy's Trading Platform?
+              Why FxGold Trading Platform?
             </h2>
             <p className="mt-4 text-xl text-gray-300 max-w-3xl mx-auto">
-              The perfect place to learn cryptocurrency trading without financial risk
+              Professional cryptocurrency trading platform with advanced features
             </p>
           </div>
           
@@ -110,7 +110,7 @@ const Home: React.FC = () => {
               How It Works
             </h2>
             <p className="mt-4 text-xl text-gray-300 max-w-3xl mx-auto">
-              Get started with Freddy's in three simple steps
+              Get started with FxGold in three simple steps
             </p>
           </div>
           
@@ -119,15 +119,15 @@ const Home: React.FC = () => {
               <div className="absolute -top-4 -left-4 bg-emerald-600 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold">1</div>
               <h3 className="text-xl font-bold text-white mb-4 mt-2">Sign Up</h3>
               <p className="text-gray-300">
-                Create your account to receive $1,000 in virtual currency automatically credited to your account.
+                Create your account and complete verification to start trading cryptocurrencies.
               </p>
             </div>
             
             <div className="bg-slate-800 rounded-lg p-6 relative">
               <div className="absolute -top-4 -left-4 bg-emerald-600 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold">2</div>
-              <h3 className="text-xl font-bold text-white mb-4 mt-2">Explore the Market</h3>
+              <h3 className="text-xl font-bold text-white mb-4 mt-2">Deposit Funds</h3>
               <p className="text-gray-300">
-                Browse through the top 15 cryptocurrencies, analyze their performance, and plan your trading strategy.
+                Fund your account with USDT through various payment methods to begin trading.
               </p>
             </div>
             
@@ -135,7 +135,7 @@ const Home: React.FC = () => {
               <div className="absolute -top-4 -left-4 bg-emerald-600 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold">3</div>
               <h3 className="text-xl font-bold text-white mb-4 mt-2">Start Trading</h3>
               <p className="text-gray-300">
-                Buy and sell cryptocurrencies with your virtual funds and track your portfolio performance over time.
+                Buy and sell cryptocurrencies or trade futures with advanced trading tools.
               </p>
             </div>
           </div>
@@ -158,13 +158,13 @@ const Home: React.FC = () => {
             Ready to Start Your Crypto Trading Journey?
           </h2>
           <p className="text-xl text-white/90 max-w-3xl mx-auto mb-8">
-            Join thousands of users who are learning to trade cryptocurrencies in a risk-free environment.
+            Join thousands of traders who trust FxGold for their cryptocurrency trading needs.
           </p>
           <Link
             to={isAuthenticated ? "/dashboard" : "/register"}
             className="inline-block px-8 py-3 bg-white text-emerald-600 hover:bg-gray-100 font-medium rounded-md transition-colors"
           >
-            {isAuthenticated ? "Go to Dashboard" : "Sign Up for Free"}
+            {isAuthenticated ? "Go to Dashboard" : "Sign Up Now"}
           </Link>
         </div>
       </div>
