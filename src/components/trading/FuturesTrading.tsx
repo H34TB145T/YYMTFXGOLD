@@ -4,11 +4,10 @@ import { useCrypto } from '../../contexts/CryptoContext';
 import { Cryptocurrency } from '../../types';
 import { formatCurrency, formatCryptoAmount } from '../../utils/helpers';
 import { AlertCircle } from 'lucide-react';
-import PriceChart from '../common/PriceChart';
 
 interface FuturesTradingProps {
   selectedCrypto: Cryptocurrency;
-  onTrade: (type: 'long' | 'short', amount: number, leverage: number) => void;
+  onTrade: (type: 'long' | 'short', amount: number, leverage: number, walletAddress: string) => void;
 }
 
 const FuturesTrading: React.FC<FuturesTradingProps> = ({ selectedCrypto, onTrade }) => {
@@ -16,6 +15,7 @@ const FuturesTrading: React.FC<FuturesTradingProps> = ({ selectedCrypto, onTrade
   const [amount, setAmount] = useState('');
   const [leverage, setLeverage] = useState(1);
   const [tradeType, setTradeType] = useState<'long' | 'short'>('long');
+  const [walletAddress, setWalletAddress] = useState('');
   const [error, setError] = useState('');
 
   const total = amount ? parseFloat(amount) * selectedCrypto.price : 0;
@@ -34,6 +34,11 @@ const FuturesTrading: React.FC<FuturesTradingProps> = ({ selectedCrypto, onTrade
     }
   };
 
+  const handleWalletAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setWalletAddress(e.target.value);
+    setError('');
+  };
+
   const handleLeverageChange = (newLeverage: number) => {
     setLeverage(newLeverage);
   };
@@ -47,14 +52,22 @@ const FuturesTrading: React.FC<FuturesTradingProps> = ({ selectedCrypto, onTrade
   };
 
   const handleSubmit = () => {
-    if (!amount) return;
+    if (!amount) {
+      setError('Please enter an amount');
+      return;
+    }
+    if (!walletAddress) {
+      setError('Please enter a wallet address');
+      return;
+    }
     const amountValue = parseFloat(amount);
     if (isNaN(amountValue) || amountValue <= 0) {
       setError('Please enter a valid amount');
       return;
     }
-    onTrade(tradeType, amountValue, leverage);
+    onTrade(tradeType, amountValue, leverage, walletAddress);
     setAmount('');
+    setWalletAddress('');
   };
 
   return (
@@ -145,6 +158,22 @@ const FuturesTrading: React.FC<FuturesTradingProps> = ({ selectedCrypto, onTrade
           </div>
         </div>
 
+        <div className="mb-4">
+          <label htmlFor="walletAddress" className="block text-sm font-medium text-gray-300 mb-2">
+            {tradeType === 'long' 
+              ? `Your ${selectedCrypto.symbol} Wallet Address to Receive`
+              : 'Your USDT Wallet Address to Receive'}
+          </label>
+          <input
+            id="walletAddress"
+            type="text"
+            value={walletAddress}
+            onChange={handleWalletAddressChange}
+            className="block w-full bg-slate-700 border-gray-600 rounded-md py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            placeholder={`Enter ${tradeType === 'long' ? selectedCrypto.symbol : 'USDT'} wallet address`}
+          />
+        </div>
+
         <div className="space-y-2 mb-6">
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">Required Margin</span>
@@ -162,9 +191,9 @@ const FuturesTrading: React.FC<FuturesTradingProps> = ({ selectedCrypto, onTrade
 
         <button
           onClick={handleSubmit}
-          disabled={!canTrade || !amount}
+          disabled={!canTrade || !amount || !walletAddress}
           className={`w-full py-3 rounded-md font-medium transition-colors ${
-            canTrade && amount
+            canTrade && amount && walletAddress
               ? tradeType === 'long'
                 ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                 : 'bg-red-600 hover:bg-red-700 text-white'
@@ -173,6 +202,17 @@ const FuturesTrading: React.FC<FuturesTradingProps> = ({ selectedCrypto, onTrade
         >
           {tradeType === 'long' ? 'Open Long' : 'Open Short'} {selectedCrypto.symbol}
         </button>
+
+        <div className="mt-4 p-4 bg-slate-700 rounded-lg">
+          <h3 className="text-white font-medium mb-2">How to Trade Futures:</h3>
+          <ol className="list-decimal list-inside text-sm text-gray-300 space-y-2">
+            <li>Select your position type (Long/Short)</li>
+            <li>Choose your leverage (higher leverage = higher risk)</li>
+            <li>Enter the position size</li>
+            <li>Provide your wallet address for receiving profits</li>
+            <li>Submit the order and wait for admin confirmation</li>
+          </ol>
+        </div>
       </div>
     </div>
   );
