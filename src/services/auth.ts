@@ -52,8 +52,8 @@ export const register = async (
       phone,
       role: 'user',
       is_verified: false,
-      balance: 1000, // Initial balance
-      marginBalance: 1000, // Initial margin balance
+      balance: 0, // No initial balance
+      marginBalance: 0, // No initial margin balance
       assets: [], // Empty initial assets
       transactions: [], // Empty initial transactions
       positions: [] // Empty initial positions
@@ -83,8 +83,8 @@ export const getCurrentUser = (token: string): User | null => {
       // Ensure all required properties exist with default values
       return {
         ...user,
-        balance: user.balance ?? 1000,
-        marginBalance: user.marginBalance ?? 1000,
+        balance: user.balance ?? 0,
+        marginBalance: user.marginBalance ?? 0,
         assets: user.assets ?? [],
         transactions: user.transactions ?? [],
         positions: user.positions ?? []
