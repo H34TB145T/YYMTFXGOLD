@@ -71,7 +71,7 @@ export interface Transaction {
   amount: number;
   price: number;
   total: number;
-  type: 'buy' | 'sell' | 'deposit' | 'withdrawal' | 'transfer';
+  type: 'buy' | 'sell' | 'deposit' | 'withdrawal' | 'transfer' | 'long' | 'short';
   timestamp: number;
 }
 

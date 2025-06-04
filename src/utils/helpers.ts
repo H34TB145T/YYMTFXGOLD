@@ -247,6 +247,82 @@ export const calculateAvailableMargin = (user: User): number => {
   return user.marginBalance;
 };
 
+// Calculate position PnL
+export const calculatePositionPnL = (position: Position, currentPrice: number): number => {
+  if (!position.isOpen) return 0;
+  
+  const priceDiff = position.type === 'long' 
+    ? currentPrice - position.entryPrice
+    : position.entryPrice - currentPrice;
+    
+  return (priceDiff * position.size * position.leverage);
+};
+
+// Calculate liquidation price for a position
+export const calculateLiquidationPrice = (
+  entryPrice: number,
+  leverage: number,
+  type: 'long' | 'short',
+  maintenanceMargin: number = 0.05
+): number => {
+  const liquidationThreshold = 1 / leverage + maintenanceMargin;
+  
+  if (type === 'long') {
+    return entryPrice * (1 - liquidationThreshold);
+  } else {
+    return entryPrice * (1 + liquidationThreshold);
+  }
+};
+
+// Open a new position
+export const openPosition = (
+  user: User,
+  crypto: Cryptocurrency,
+  type: 'long' | 'short',
+  leverage: number,
+  margin: number
+): User | null => {
+  if (user.marginBalance < margin) {
+    return null;
+  }
+
+  const size = margin * leverage;
+  const position: Position = {
+    id: uuidv4(),
+    coinId: crypto.id,
+    coinName: crypto.name,
+    coinSymbol: crypto.symbol,
+    type,
+    leverage,
+    size,
+    entryPrice: crypto.price,
+    liquidationPrice: calculateLiquidationPrice(crypto.price, leverage, type),
+    margin,
+    pnl: 0,
+    timestamp: Date.now(),
+    isOpen: true
+  };
+
+  const transaction: Transaction = {
+    id: uuidv4(),
+    coinId: crypto.id,
+    coinName: crypto.name,
+    coinSymbol: crypto.symbol,
+    amount: size,
+    price: crypto.price,
+    total: margin,
+    type,
+    timestamp: Date.now()
+  };
+
+  return {
+    ...user,
+    marginBalance: user.marginBalance - margin,
+    positions: [position, ...user.positions],
+    transactions: [transaction, ...user.transactions]
+  };
+};
+
 // Check if position should be liquidated
 export const shouldLiquidatePosition = (position: Position, currentPrice: number): boolean => {
   return position.type === 'long' 
