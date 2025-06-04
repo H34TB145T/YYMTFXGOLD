@@ -18,6 +18,7 @@ const TradingInterface: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [mmkRate] = useState(3200); // MMK to USD rate - In production, this should come from an API
   const navigate = useNavigate();
 
   // Get currently selected crypto
@@ -88,8 +89,48 @@ const TradingInterface: React.FC = () => {
     }
   };
 
+  const handleUSDTTransaction = async (type: 'buy' | 'sell') => {
+    if (!user || !amount) return;
+    
+    const amountValue = parseFloat(amount);
+    if (isNaN(amountValue) || amountValue <= 0) {
+      setError('Please enter a valid amount');
+      return;
+    }
+    
+    let updatedUser;
+    
+    if (type === 'buy') {
+      updatedUser = processUSDTPurchase(user, amountValue, mmkRate);
+      if (!updatedUser) {
+        setError('Insufficient MMK balance for this transaction');
+        return;
+      }
+    } else {
+      updatedUser = processUSDTSale(user, amountValue, mmkRate);
+      if (!updatedUser) {
+        setError('Insufficient USDT balance for this transaction');
+        return;
+      }
+    }
+    
+    updateUser(updatedUser);
+    setSuccess(`Successfully ${type === 'buy' ? 'bought' : 'sold'} ${amountValue} USDT`);
+    setAmount('');
+    
+    setTimeout(() => {
+      setSuccess('');
+    }, 3000);
+  };
+
   const handleSubmit = () => {
     if (!user || !selectedCrypto || !amount) return;
+    
+    // Handle USDT trading separately
+    if (selectedCrypto.symbol === 'USDT') {
+      handleUSDTTransaction(tradeType);
+      return;
+    }
     
     const amountValue = parseFloat(amount);
     if (isNaN(amountValue) || amountValue <= 0) {
@@ -102,7 +143,7 @@ const TradingInterface: React.FC = () => {
     if (tradeType === 'buy') {
       updatedUser = processBuyTransaction(user, selectedCrypto, amountValue);
       if (!updatedUser) {
-        setError('Insufficient balance for this transaction');
+        setError('Insufficient USDT balance for this transaction');
         return;
       }
     } else {
@@ -117,10 +158,50 @@ const TradingInterface: React.FC = () => {
     setSuccess(`Successfully ${tradeType === 'buy' ? 'bought' : 'sold'} ${amountValue} ${selectedCrypto.symbol}`);
     setAmount('');
     
-    // Clear success message after 3 seconds
     setTimeout(() => {
       setSuccess('');
     }, 3000);
+  };
+
+  const renderBalances = () => {
+    if (!user) return null;
+
+    if (selectedCrypto?.symbol === 'USDT') {
+      return (
+        <div className="mb-4">
+          <p className="text-gray-400 text-sm mb-1">
+            {tradeType === 'buy' ? 'Available MMK Balance' : 'Available USDT'}
+          </p>
+          <p className="text-white font-medium">
+            {tradeType === 'buy' 
+              ? formatMMK(user.balance)
+              : `${formatCryptoAmount(user.usdtBalance, 'USDT')} USDT`
+            }
+          </p>
+          {selectedCrypto?.symbol === 'USDT' && (
+            <p className="text-gray-400 text-sm mt-1">
+              Rate: 1 USDT = {formatMMK(mmkRate)}
+            </p>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="mb-4">
+        <p className="text-gray-400 text-sm mb-1">
+          {tradeType === 'buy' ? 'Available USDT' : 'Available Crypto'}
+        </p>
+        <p className="text-white font-medium">
+          {tradeType === 'buy' 
+            ? `${formatCryptoAmount(user.usdtBalance, 'USDT')} USDT`
+            : userAsset 
+              ? `${formatCryptoAmount(userAsset.amount, userAsset.symbol)} ${userAsset.symbol}`
+              : `0 ${selectedCrypto?.symbol || ''}`
+          }
+        </p>
+      </div>
+    );
   };
 
   const refreshData = () => {
@@ -279,21 +360,7 @@ const TradingInterface: React.FC = () => {
                 </button>
               </div>
               
-              {user && (
-                <div className="mb-4">
-                  <p className="text-gray-400 text-sm mb-1">
-                    {tradeType === 'buy' ? 'Available Balance' : 'Available Crypto'}
-                  </p>
-                  <p className="text-white font-medium">
-                    {tradeType === 'buy' 
-                      ? formatCurrency(user.balance)
-                      : userAsset 
-                        ? `${formatCryptoAmount(userAsset.amount, userAsset.symbol)} ${userAsset.symbol}`
-                        : `0 ${selectedCrypto?.symbol || ''}`
-                    }
-                  </p>
-                </div>
-              )}
+              {user && renderBalances()}
               
               {error && (
                 <div className="mb-4 bg-red-900/30 border border-red-500 rounded-md p-3 flex items-start">
