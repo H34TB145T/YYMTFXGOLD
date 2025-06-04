@@ -7,6 +7,7 @@ export interface User {
   is_verified: boolean;
   wallet_address?: string;
   balance: number;
+  usdtBalance: number;
   marginBalance: number;
   assets: CryptoAsset[];
   transactions: Transaction[];
