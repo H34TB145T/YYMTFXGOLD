@@ -6,7 +6,7 @@ export interface User {
   role: 'user' | 'admin';
   is_verified: boolean;
   wallet_address?: string;
-  balance: number;
+  balance: number; // MMK balance
   usdtBalance: number;
   marginBalance: number;
   assets: CryptoAsset[];
@@ -71,7 +71,7 @@ export interface Transaction {
   amount: number;
   price: number;
   total: number;
-  type: 'buy' | 'sell' | 'close';
+  type: 'buy' | 'sell' | 'deposit' | 'withdrawal' | 'transfer';
   timestamp: number;
 }
 
@@ -89,4 +89,15 @@ export interface Position {
   pnl: number;
   timestamp: number;
   isOpen: boolean;
+}
+
+export interface USDTWallet {
+  address: string;
+  network: 'TRC20' | 'ERC20' | 'BEP20';
+  memo?: string;
+}
+
+export interface TradingMode {
+  type: 'spot' | 'futures';
+  leverage?: number;
 }
