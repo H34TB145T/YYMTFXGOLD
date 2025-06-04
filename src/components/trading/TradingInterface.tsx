@@ -2,7 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCrypto } from '../../contexts/CryptoContext';
-import { processBuyTransaction, processSellTransaction, formatCurrency, formatCryptoAmount, formatMMK } from '../../utils/helpers';
+import { 
+  processBuyTransaction, 
+  processSellTransaction, 
+  formatCurrency, 
+  formatCryptoAmount, 
+  formatMMK,
+  processUSDTPurchase,
+  processUSDTSale
+} from '../../utils/helpers';
 import PriceChart from '../common/PriceChart';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { AlertCircle, ArrowDownRight, ArrowUpRight, RefreshCw } from 'lucide-react';
