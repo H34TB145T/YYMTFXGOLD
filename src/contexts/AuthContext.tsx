@@ -1,15 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types';
-import { v4 as uuidv4 } from 'uuid';
+import { login as authLogin, register as authRegister } from '../services/auth';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   loading: boolean;
-  login: (email: string, password: string) => boolean;
-  register: (username: string, email: string, password: string) => boolean;
+  login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
+  register: (email: string, password: string, fullName: string, phone: string) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
-  updateUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,68 +30,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('freddyUser');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    const token = localStorage.getItem('token');
+    if (token) {
+      // Verify token and set user
+      // This would typically involve a backend call
+      setLoading(false);
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem('freddyUser', JSON.stringify(user));
+  const login = async (email: string, password: string) => {
+    const result = await authLogin(email, password, '127.0.0.1');
+    if (result.success && result.token) {
+      localStorage.setItem('token', result.token);
+      // Set user from token
+      setUser({
+        id: 'user-id',
+        email,
+        full_name: 'User Name',
+        role: 'user',
+        is_verified: true,
+        phone: ''
+      });
     }
-  }, [user]);
-
-  const login = (email: string, password: string): boolean => {
-    const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
-    const foundUser = users.find((u: any) => u.email === email);
-    
-    if (foundUser && password === 'password') {
-      setUser(foundUser);
-      return true;
-    }
-    return false;
+    return result;
   };
 
-  const register = (username: string, email: string, password: string): boolean => {
-    const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
-    
-    if (users.some((u: any) => u.email === email)) {
-      return false;
-    }
-    
-    const newUser: User = {
-      id: uuidv4(),
-      username,
-      email,
-      balance: 1000,
-      marginBalance: 1000,
-      assets: [],
-      positions: [],
-      transactions: []
-    };
-    
-    users.push(newUser);
-    localStorage.setItem('freddyUsers', JSON.stringify(users));
-    
-    setUser(newUser);
-    return true;
+  const register = async (email: string, password: string, fullName: string, phone: string) => {
+    return await authRegister(email, password, fullName, phone);
   };
 
   const logout = () => {
+    localStorage.removeItem('token');
     setUser(null);
-    localStorage.removeItem('freddyUser');
-  };
-
-  const updateUser = (updatedUser: User) => {
-    setUser(updatedUser);
-    
-    const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
-    const updatedUsers = users.map((u: User) => 
-      u.id === updatedUser.id ? updatedUser : u
-    );
-    localStorage.setItem('freddyUsers', JSON.stringify(updatedUsers));
   };
 
   return (
@@ -102,8 +73,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       loading,
       login, 
       register, 
-      logout,
-      updateUser
+      logout
     }}>
       {children}
     </AuthContext.Provider>

@@ -1,12 +1,41 @@
 export interface User {
   id: string;
-  username: string;
   email: string;
-  balance: number;
-  assets: CryptoAsset[];
-  transactions: Transaction[];
-  positions: Position[];
-  marginBalance: number;
+  full_name: string;
+  phone: string;
+  role: 'user' | 'admin';
+  is_verified: boolean;
+  wallet_address?: string;
+}
+
+export interface Order {
+  id: string;
+  userId: string;
+  type: 'buy' | 'sell';
+  cryptoType: string;
+  amount: number;
+  priceUsd: number;
+  priceMmk: number;
+  paymentMethod: string;
+  paymentScreenshotUrl?: string;
+  walletAddress: string;
+  memo?: string;
+  bankAccountName?: string;
+  transactionId?: string;
+  status: 'pending' | 'processing' | 'completed' | 'rejected';
+  adminNotes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  completedAt?: Date;
+  adminId?: string;
+}
+
+export interface PaymentMethod {
+  id: string;
+  name: string;
+  displayName: string;
+  qrCodeUrl?: string;
+  isActive: boolean;
 }
 
 export interface Cryptocurrency {
@@ -18,40 +47,4 @@ export interface Cryptocurrency {
   image: string;
   marketCap: number;
   rank: number;
-}
-
-export interface CryptoAsset {
-  coinId: string;
-  symbol: string;
-  name: string;
-  amount: number;
-  purchasePrice: number;
-}
-
-export interface Transaction {
-  id: string;
-  coinId: string;
-  coinName: string;
-  coinSymbol: string;
-  amount: number;
-  price: number;
-  total: number;
-  type: 'buy' | 'sell' | 'long' | 'short' | 'close';
-  timestamp: number;
-}
-
-export interface Position {
-  id: string;
-  coinId: string;
-  coinName: string;
-  coinSymbol: string;
-  type: 'long' | 'short';
-  leverage: number;
-  size: number;
-  entryPrice: number;
-  liquidationPrice: number;
-  margin: number;
-  pnl: number;
-  timestamp: number;
-  isOpen: boolean;
 }
