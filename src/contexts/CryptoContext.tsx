@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Cryptocurrency } from '../types';
-import { getTop20Cryptocurrencies } from '../services/marketcapApi';
+import { cryptoData } from '../utils/mockData';
 
 interface CryptoContextType {
   cryptocurrencies: Cryptocurrency[];
@@ -30,10 +30,10 @@ export const CryptoProvider: React.FC<CryptoProviderProps> = ({ children }) => {
   const fetchCryptoData = async () => {
     setLoading(true);
     try {
-      const data = await getTop20Cryptocurrencies();
-      setCryptocurrencies(data);
+      // Using mock data instead of API call to avoid CORS issues
+      setCryptocurrencies(cryptoData);
     } catch (error) {
-      console.error('Error fetching cryptocurrency data:', error);
+      console.error('Error setting cryptocurrency data:', error);
     } finally {
       setLoading(false);
     }
