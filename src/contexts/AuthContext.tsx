@@ -32,9 +32,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      // Verify token and set user
-      // This would typically involve a backend call
-      setLoading(false);
+      // Fetch user data from the backend
+      fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setUser(data.user);
+          } else {
+            localStorage.removeItem('token');
+          }
+        })
+        .catch(() => {
+          localStorage.removeItem('token');
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     } else {
       setLoading(false);
     }
@@ -44,15 +61,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const result = await authLogin(email, password, '127.0.0.1');
     if (result.success && result.token) {
       localStorage.setItem('token', result.token);
-      // Set user from token
-      setUser({
-        id: 'user-id',
-        email,
-        full_name: 'User Name',
-        role: 'user',
-        is_verified: true,
-        phone: ''
+      // Fetch user data after successful login
+      const userResponse = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
+        headers: {
+          'Authorization': `Bearer ${result.token}`
+        }
       });
+      const userData = await userResponse.json();
+      if (userData.success) {
+        setUser(userData.user);
+      }
     }
     return result;
   };
