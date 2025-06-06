@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Wallet, AlertCircle } from 'lucide-react';
+import { emailService } from '../../services/emailService';
+import { Wallet, AlertCircle, CheckCircle } from 'lucide-react';
 
 const Register: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -9,30 +10,53 @@ const Register: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState('');
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
     
     if (!username || !email || !password || !confirmPassword) {
       setError('Please fill in all fields');
+      setLoading(false);
       return;
     }
     
     if (password !== confirmPassword) {
       setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      setLoading(false);
       return;
     }
     
-    const success = register(username, email, password);
+    const registerResult = await register(email, password, username, '');
     
-    if (success) {
-      navigate('/dashboard');
+    if (registerResult.success) {
+      // Send verification email
+      const emailResult = await emailService.sendVerificationEmail(email, username);
+      
+      if (emailResult.success) {
+        setSuccess('Registration successful! Please check your email for verification code.');
+        setTimeout(() => {
+          navigate(`/verify-email?email=${encodeURIComponent(email)}`);
+        }, 2000);
+      } else {
+        setError('Registration successful but failed to send verification email. Please try logging in.');
+      }
     } else {
-      setError('Email is already registered');
+      setError(registerResult.message);
     }
+    
+    setLoading(false);
   };
 
   return (
@@ -54,6 +78,13 @@ const Register: React.FC = () => {
           <div className="bg-red-900/30 border border-red-500 rounded-md p-3 flex items-start">
             <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 mr-2 flex-shrink-0" />
             <p className="text-sm text-red-200">{error}</p>
+          </div>
+        )}
+
+        {success && (
+          <div className="bg-emerald-900/30 border border-emerald-500 rounded-md p-3 flex items-start">
+            <CheckCircle className="h-5 w-5 text-emerald-500 mt-0.5 mr-2 flex-shrink-0" />
+            <p className="text-sm text-emerald-200">{success}</p>
           </div>
         )}
         
@@ -127,9 +158,10 @@ const Register: React.FC = () => {
           <div>
             <button
               type="submit"
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors"
+              disabled={loading}
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              Create Account
+              {loading ? 'Creating Account...' : 'Create Account'}
             </button>
           </div>
           

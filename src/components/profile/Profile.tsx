@@ -1,22 +1,27 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCrypto } from '../../contexts/CryptoContext';
+import { emailService } from '../../services/emailService';
 import { calculatePortfolioValue, formatCurrency, formatCryptoAmount, formatDate } from '../../utils/helpers';
 import AssetCard from '../common/AssetCard';
 import LoadingSpinner from '../common/LoadingSpinner';
-import { User, Clock, Wallet, DollarSign, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { User, Clock, Wallet, DollarSign, ArrowUpRight, ArrowDownRight, Shield, AlertCircle, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 type TabType = 'wallet' | 'transactions' | 'settings';
 
 const Profile: React.FC = () => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { cryptocurrencies, loading } = useCrypto();
   const [activeTab, setActiveTab] = useState<TabType>('wallet');
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(user?.twoFactorEnabled || false);
+  const [enabling2FA, setEnabling2FA] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const navigate = useNavigate();
 
   const portfolioValue = user && cryptocurrencies.length > 0
-    ? calculatePortfolioValue(user.assets, cryptocurrencies)
+    ? calculatePortfolioValue(user.assets, user.positions || [], cryptocurrencies)
     : 0;
 
   const handleTabChange = (tab: TabType) => {
@@ -25,6 +30,41 @@ const Profile: React.FC = () => {
 
   const navigateToTrade = (cryptoId: string) => {
     navigate(`/trade?coin=${cryptoId}`);
+  };
+
+  const handleToggle2FA = async () => {
+    if (!user) return;
+
+    setEnabling2FA(true);
+    setError('');
+    setSuccess('');
+
+    if (!twoFactorEnabled) {
+      // Enable 2FA
+      const result = await emailService.send2FAEmail(user.email, user.username || user.full_name);
+      
+      if (result.success) {
+        setSuccess('2FA setup code sent to your email. Please verify to enable 2FA.');
+        // In a real app, you'd show a verification modal here
+        // For demo, we'll just enable it after a delay
+        setTimeout(() => {
+          const updatedUser = { ...user, twoFactorEnabled: true };
+          updateUser(updatedUser);
+          setTwoFactorEnabled(true);
+          setSuccess('Two-Factor Authentication enabled successfully!');
+        }, 2000);
+      } else {
+        setError(result.message);
+      }
+    } else {
+      // Disable 2FA
+      const updatedUser = { ...user, twoFactorEnabled: false };
+      updateUser(updatedUser);
+      setTwoFactorEnabled(false);
+      setSuccess('Two-Factor Authentication disabled successfully!');
+    }
+
+    setEnabling2FA(false);
   };
 
   if (loading) {
@@ -51,8 +91,14 @@ const Profile: React.FC = () => {
               </div>
               
               <div className="flex-1">
-                <h2 className="text-xl font-bold text-white">{user?.username}</h2>
+                <h2 className="text-xl font-bold text-white">{user?.username || user?.full_name}</h2>
                 <p className="text-gray-400">{user?.email}</p>
+                {twoFactorEnabled && (
+                  <div className="flex items-center mt-2">
+                    <Shield className="h-4 w-4 text-emerald-500 mr-1" />
+                    <span className="text-emerald-400 text-sm">2FA Enabled</span>
+                  </div>
+                )}
               </div>
               
               <div className="mt-4 md:mt-0 grid grid-cols-2 gap-4">
@@ -278,6 +324,21 @@ const Profile: React.FC = () => {
           {activeTab === 'settings' && (
             <div>
               <h2 className="text-xl font-bold text-white mb-6">Account Settings</h2>
+              
+              {error && (
+                <div className="mb-4 bg-red-900/30 border border-red-500 rounded-md p-3 flex items-start">
+                  <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 mr-2 flex-shrink-0" />
+                  <p className="text-sm text-red-200">{error}</p>
+                </div>
+              )}
+
+              {success && (
+                <div className="mb-4 bg-emerald-900/30 border border-emerald-500 rounded-md p-3 flex items-start">
+                  <CheckCircle className="h-5 w-5 text-emerald-500 mt-0.5 mr-2 flex-shrink-0" />
+                  <p className="text-sm text-emerald-200">{success}</p>
+                </div>
+              )}
+
               <div className="bg-slate-800 rounded-lg p-6">
                 <div className="mb-6">
                   <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2">
@@ -286,7 +347,7 @@ const Profile: React.FC = () => {
                   <input
                     id="username"
                     type="text"
-                    defaultValue={user?.username}
+                    defaultValue={user?.username || user?.full_name}
                     disabled
                     className="block w-full bg-slate-700 border-gray-600 rounded-md py-2 px-3 text-white"
                   />
@@ -309,20 +370,30 @@ const Profile: React.FC = () => {
                     Email cannot be changed in the demo version
                   </p>
                 </div>
-                <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-                    Password
-                  </label>
-                  <input
-                    id="password"
-                    type="password"
-                    defaultValue="••••••••"
-                    disabled
-                    className="block w-full bg-slate-700 border-gray-600 rounded-md py-2 px-3 text-white"
-                  />
-                  <p className="mt-1 text-sm text-gray-400">
-                    Password cannot be changed in the demo version
-                  </p>
+
+                {/* Two-Factor Authentication */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-medium text-white">Two-Factor Authentication</h3>
+                      <p className="text-sm text-gray-400">
+                        Add an extra layer of security to your account with email-based 2FA
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleToggle2FA}
+                      disabled={enabling2FA}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                        twoFactorEnabled ? 'bg-emerald-600' : 'bg-gray-600'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          twoFactorEnabled ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="mt-8 pt-6 border-t border-slate-700">

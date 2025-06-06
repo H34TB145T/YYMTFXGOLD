@@ -7,6 +7,8 @@ import Footer from './components/layout/Footer';
 import Home from './pages/Home';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
+import EmailVerification from './components/auth/EmailVerification';
+import ForgotPassword from './components/auth/ForgotPassword';
 import Dashboard from './components/dashboard/Dashboard';
 import TradingInterface from './components/trading/TradingInterface';
 import Transactions from './components/transactions/Transactions';
@@ -25,6 +27,8 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/verify-email" element={<EmailVerification />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route 
                   path="/dashboard" 
                   element={
