@@ -70,7 +70,7 @@ const Register: React.FC = () => {
             Create your account
           </h2>
           <p className="mt-2 text-sm text-gray-400">
-            Sign up and get $1,000 virtual money to start trading
+            Join FxGold and start your cryptocurrency trading journey
           </p>
         </div>
         

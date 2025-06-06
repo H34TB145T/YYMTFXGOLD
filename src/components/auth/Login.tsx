@@ -66,7 +66,7 @@ const Login: React.FC = () => {
               Sign in to FxGold
             </h2>
             <p className="mt-2 text-sm text-gray-400">
-              Start trading crypto with your virtual portfolio
+              Access your cryptocurrency trading account
             </p>
           </div>
 
