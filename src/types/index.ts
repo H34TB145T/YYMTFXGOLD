@@ -12,6 +12,8 @@ export interface User {
   assets: CryptoAsset[];
   transactions: Transaction[];
   positions: Position[];
+  username?: string;
+  twoFactorEnabled?: boolean;
 }
 
 export interface Order {

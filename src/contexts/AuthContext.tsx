@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types';
-import { login as authLogin, register as authRegister, getCurrentUser } from '../services/auth';
+import { v4 as uuidv4 } from 'uuid';
 
 interface AuthContextType {
   user: User | null;
@@ -44,15 +44,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const result = await authLogin(email, password, '127.0.0.1');
-    if (result.success && result.token) {
-      localStorage.setItem('token', result.token);
-      const currentUser = getCurrentUser(result.token);
-      if (currentUser) {
-        setUser(currentUser);
+    try {
+      const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
+      const user = users.find((u: User) => u.email === email);
+      
+      if (user) {
+        // For demo purposes, any password works
+        const token = `demo-token-${user.id}`;
+        localStorage.setItem('token', token);
+        setUser(user);
+        return { 
+          success: true, 
+          message: 'Login successful'
+        };
       }
+      
+      return { success: false, message: 'Invalid email or password' };
+    } catch (error) {
+      console.error('Login error:', error);
+      return { success: false, message: 'Login failed' };
     }
-    return result;
   };
 
   const register = async (email: string, password: string, fullName: string, phone: string) => {
@@ -70,13 +81,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         phone,
         role: 'user',
         is_verified: false,
-        balance: 0,
+        balance: 1000, // Starting balance for demo
         usdtBalance: 0,
         marginBalance: 0,
         assets: [],
         transactions: [],
         positions: [],
-        wallet_address: generateUSDTWalletAddress()
+        username: fullName.toLowerCase().replace(/\s+/g, ''),
+        twoFactorEnabled: false
       };
       
       users.push(newUser);
@@ -84,17 +96,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       return { 
         success: true, 
-        message: 'Registration successful',
-        token: `demo-token-${newUser.id}`
+        message: 'Registration successful'
       };
     } catch (error) {
       console.error('Registration error:', error);
       return { success: false, message: 'Registration failed' };
     }
-  };
-
-  const generateUSDTWalletAddress = (): string => {
-    return `0x${uuidv4().replace(/-/g, '')}`;
   };
 
   const logout = () => {
@@ -107,6 +114,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
     const updatedUsers = users.map((u: User) => u.id === updatedUser.id ? updatedUser : u);
     localStorage.setItem('freddyUsers', JSON.stringify(updatedUsers));
+  };
+
+  const getCurrentUser = (token: string): User | null => {
+    try {
+      const userId = token.replace('demo-token-', '');
+      const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
+      const user = users.find((u: User) => u.id === userId);
+      
+      if (user) {
+        // Ensure all required properties exist with default values
+        return {
+          ...user,
+          balance: user.balance ?? 1000,
+          usdtBalance: user.usdtBalance ?? 0,
+          marginBalance: user.marginBalance ?? 0,
+          assets: user.assets ?? [],
+          transactions: user.transactions ?? [],
+          positions: user.positions ?? [],
+          username: user.username ?? user.full_name?.toLowerCase().replace(/\s+/g, ''),
+          twoFactorEnabled: user.twoFactorEnabled ?? false
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Get current user error:', error);
+      return null;
+    }
   };
 
   return (
