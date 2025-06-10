@@ -3,7 +3,7 @@
 $host = 'localhost';
 $dbname = 'zpjhpszw_fxgold';
 $username = 'zpjhpszw_fxgold_admin';
-$password = 'Fxgold_admin123!@#'; // Your cPanel database password
+$password = 'Fxgold_admin123!@#';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
