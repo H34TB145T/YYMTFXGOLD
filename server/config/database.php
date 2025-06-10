@@ -2,7 +2,7 @@
 // Database configuration
 $host = 'localhost';
 $dbname = 'zpjhpszw_fxgold';
-$username = 'zpjhpszw_fxgold_admin'; // Your cPanel database username
+$username = 'zpjhpszw_fxgold_admin';
 $password = 'Fxgold_admin123!@#'; // Your cPanel database password
 
 try {
