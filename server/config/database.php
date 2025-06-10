@@ -1,9 +1,9 @@
 <?php
 // Database configuration
 $host = 'localhost';
-$dbname = 'fxgold_trading'; // Your database name
-$username = 'your_db_username'; // Your cPanel database username
-$password = 'your_db_password'; // Your cPanel database password
+$dbname = 'zpjhpszw_fxgold'; // Your correct database name
+$username = 'zpjhpszw_fxgold_admin'; // Your cPanel database username
+$password = 'Fxgold_admin123!@#'; // Your cPanel database password
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
