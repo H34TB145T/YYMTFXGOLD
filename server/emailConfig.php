@@ -1,15 +1,15 @@
 <?php
-// Email configuration for your domain
+// Email configuration for servers without mail server
 class EmailConfig {
-    // SMTP Configuration for your domain
-    const SMTP_HOST = 'mail.fxgold.shop';
+    // SMTP Configuration - Using Gmail SMTP as fallback
+    const SMTP_HOST = 'smtp.gmail.com';
     const SMTP_PORT = 587;
-    const SMTP_USERNAME = 'no-reply@fxgold.shop';
-    const SMTP_PASSWORD = 'your_email_password_here'; // Set this in your cPanel
+    const SMTP_USERNAME = 'your-gmail@gmail.com'; // Change this to your Gmail
+    const SMTP_PASSWORD = 'your-app-password'; // Gmail App Password
     const SMTP_ENCRYPTION = 'tls';
     
     // Email settings
-    const FROM_EMAIL = 'no-reply@fxgold.shop';
+    const FROM_EMAIL = 'noreply@fxgold.shop';
     const FROM_NAME = 'FxGold Trading';
     const REPLY_TO = 'support@fxgold.shop';
     
@@ -17,31 +17,41 @@ class EmailConfig {
     const OTP_LENGTH = 6;
     const OTP_EXPIRY_MINUTES = 10;
     const OTP_2FA_EXPIRY_MINUTES = 5;
+    
+    // Email feature toggle
+    const EMAIL_ENABLED = false; // Set to false to disable email features
 }
 
-// Email service class
+// Email service class with fallback for no mail server
 class EmailService {
     private $mailer;
+    private $emailEnabled;
     
     public function __construct() {
-        // Using PHPMailer for sending emails
-        require_once 'vendor/autoload.php'; // You'll need to install PHPMailer via Composer
+        $this->emailEnabled = EmailConfig::EMAIL_ENABLED;
         
-        $this->mailer = new PHPMailer\PHPMailer\PHPMailer(true);
-        
-        // SMTP configuration
-        $this->mailer->isSMTP();
-        $this->mailer->Host = EmailConfig::SMTP_HOST;
-        $this->mailer->SMTPAuth = true;
-        $this->mailer->Username = EmailConfig::SMTP_USERNAME;
-        $this->mailer->Password = EmailConfig::SMTP_PASSWORD;
-        $this->mailer->SMTPSecure = EmailConfig::SMTP_ENCRYPTION;
-        $this->mailer->Port = EmailConfig::SMTP_PORT;
-        
-        // Default settings
-        $this->mailer->setFrom(EmailConfig::FROM_EMAIL, EmailConfig::FROM_NAME);
-        $this->mailer->addReplyTo(EmailConfig::REPLY_TO, EmailConfig::FROM_NAME);
-        $this->mailer->isHTML(true);
+        if ($this->emailEnabled) {
+            // Only initialize PHPMailer if email is enabled
+            if (file_exists('vendor/autoload.php')) {
+                require_once 'vendor/autoload.php';
+                
+                $this->mailer = new PHPMailer\PHPMailer\PHPMailer(true);
+                
+                // SMTP configuration
+                $this->mailer->isSMTP();
+                $this->mailer->Host = EmailConfig::SMTP_HOST;
+                $this->mailer->SMTPAuth = true;
+                $this->mailer->Username = EmailConfig::SMTP_USERNAME;
+                $this->mailer->Password = EmailConfig::SMTP_PASSWORD;
+                $this->mailer->SMTPSecure = EmailConfig::SMTP_ENCRYPTION;
+                $this->mailer->Port = EmailConfig::SMTP_PORT;
+                
+                // Default settings
+                $this->mailer->setFrom(EmailConfig::FROM_EMAIL, EmailConfig::FROM_NAME);
+                $this->mailer->addReplyTo(EmailConfig::REPLY_TO, EmailConfig::FROM_NAME);
+                $this->mailer->isHTML(true);
+            }
+        }
     }
     
     public function generateOTP($length = EmailConfig::OTP_LENGTH) {
@@ -49,7 +59,15 @@ class EmailService {
     }
     
     public function sendVerificationEmail($email, $userName, $otp) {
+        if (!$this->emailEnabled) {
+            // Log the OTP for manual verification when email is disabled
+            error_log("VERIFICATION OTP for $email: $otp");
+            return true; // Return true to continue the flow
+        }
+        
         try {
+            if (!$this->mailer) return false;
+            
             $this->mailer->clearAddresses();
             $this->mailer->addAddress($email);
             
@@ -64,7 +82,15 @@ class EmailService {
     }
     
     public function sendPasswordResetEmail($email, $userName, $otp) {
+        if (!$this->emailEnabled) {
+            // Log the OTP for manual verification when email is disabled
+            error_log("PASSWORD RESET OTP for $email: $otp");
+            return true; // Return true to continue the flow
+        }
+        
         try {
+            if (!$this->mailer) return false;
+            
             $this->mailer->clearAddresses();
             $this->mailer->addAddress($email);
             
@@ -79,7 +105,15 @@ class EmailService {
     }
     
     public function send2FAEmail($email, $userName, $otp) {
+        if (!$this->emailEnabled) {
+            // Log the OTP for manual verification when email is disabled
+            error_log("2FA OTP for $email: $otp");
+            return true; // Return true to continue the flow
+        }
+        
         try {
+            if (!$this->mailer) return false;
+            
             $this->mailer->clearAddresses();
             $this->mailer->addAddress($email);
             
@@ -212,14 +246,15 @@ class OTPManager {
     
     public function storeOTP($email, $otp, $type, $expiryMinutes = EmailConfig::OTP_EXPIRY_MINUTES) {
         $expiryTime = date('Y-m-d H:i:s', strtotime("+{$expiryMinutes} minutes"));
+        $id = $this->generateUUID();
         
         // Delete any existing OTP for this email and type
         $stmt = $this->db->prepare("DELETE FROM otp_codes WHERE email = ? AND type = ?");
         $stmt->execute([$email, $type]);
         
         // Insert new OTP
-        $stmt = $this->db->prepare("INSERT INTO otp_codes (email, otp, type, expires_at) VALUES (?, ?, ?, ?)");
-        return $stmt->execute([$email, $otp, $type, $expiryTime]);
+        $stmt = $this->db->prepare("INSERT INTO otp_codes (id, email, otp, type, expires_at) VALUES (?, ?, ?, ?, ?)");
+        return $stmt->execute([$id, $email, $otp, $type, $expiryTime]);
     }
     
     public function verifyOTP($email, $otp, $type) {
@@ -240,6 +275,16 @@ class OTPManager {
     public function cleanExpiredOTPs() {
         $stmt = $this->db->prepare("DELETE FROM otp_codes WHERE expires_at <= NOW()");
         return $stmt->execute();
+    }
+    
+    private function generateUUID() {
+        return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0x0fff) | 0x4000,
+            mt_rand(0, 0x3fff) | 0x8000,
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+        );
     }
 }
 ?>
