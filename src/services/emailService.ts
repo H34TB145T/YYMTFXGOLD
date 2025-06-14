@@ -18,12 +18,12 @@ class EmailService {
 
   constructor() {
     this.config = {
-      host: process.env.SMTP_HOST || 'mail.fxgold.shop',
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true',
+      host: 'mail.fxgold.shop',
+      port: 587,
+      secure: false,
       auth: {
-        user: process.env.SMTP_USER || 'no-reply@fxgold.shop',
-        pass: process.env.SMTP_PASS || ''
+        user: 'no-reply@fxgold.shop',
+        pass: ''
       }
     };
   }
