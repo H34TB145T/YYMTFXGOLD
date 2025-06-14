@@ -31,6 +31,10 @@ switch ($method) {
                 handleVerifyEmail($input, $pdo, $otpManager);
                 break;
                 
+            case 'resend_verification':
+                handleResendVerification($input, $pdo, $emailService, $otpManager);
+                break;
+                
             case 'login':
                 handleLogin($input, $pdo, $emailService, $otpManager);
                 break;
@@ -74,12 +78,26 @@ function handleRegister($input, $pdo, $emailService, $otpManager) {
         return;
     }
     
+    // Validate email format
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Invalid email format']);
+        return;
+    }
+    
+    // Validate password strength
+    if (strlen($password) < 6) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Password must be at least 6 characters long']);
+        return;
+    }
+    
     // Check if user already exists
     $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ? OR username = ?");
     $stmt->execute([$email, $username]);
     if ($stmt->fetch()) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'User already exists']);
+        echo json_encode(['success' => false, 'message' => 'User already exists with this email or username']);
         return;
     }
     
@@ -101,14 +119,16 @@ function handleRegister($input, $pdo, $emailService, $otpManager) {
             if ($emailService->sendVerificationEmail($email, $username, $otp)) {
                 echo json_encode([
                     'success' => true, 
-                    'message' => 'Registration successful. Please check your email for verification code.',
-                    'userId' => $userId
+                    'message' => 'Registration successful! Please check your email for verification code.',
+                    'userId' => $userId,
+                    'requiresVerification' => true
                 ]);
             } else {
                 echo json_encode([
                     'success' => true, 
-                    'message' => 'Registration successful but failed to send verification email.',
-                    'userId' => $userId
+                    'message' => 'Registration successful but failed to send verification email. Please contact support.',
+                    'userId' => $userId,
+                    'requiresVerification' => true
                 ]);
             }
         } else {
@@ -122,7 +142,7 @@ function handleRegister($input, $pdo, $emailService, $otpManager) {
         }
     } else {
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Registration failed']);
+        echo json_encode(['success' => false, 'message' => 'Registration failed. Please try again.']);
     }
 }
 
@@ -133,6 +153,13 @@ function handleVerifyEmail($input, $pdo, $otpManager) {
     if (empty($email) || empty($otp)) {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Missing email or OTP']);
+        return;
+    }
+    
+    // Validate OTP format
+    if (!preg_match('/^\d{6}$/', $otp)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'OTP must be 6 digits']);
         return;
     }
     
@@ -157,14 +184,56 @@ function handleVerifyEmail($input, $pdo, $otpManager) {
         // Update user as verified
         $stmt = $pdo->prepare("UPDATE users SET is_verified = 1 WHERE email = ?");
         if ($stmt->execute([$email])) {
-            echo json_encode(['success' => true, 'message' => 'Email verified successfully']);
+            echo json_encode(['success' => true, 'message' => 'Email verified successfully! You can now login.']);
         } else {
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Failed to update verification status']);
         }
     } else {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Invalid or expired OTP']);
+        echo json_encode(['success' => false, 'message' => 'Invalid or expired OTP. Please request a new code.']);
+    }
+}
+
+function handleResendVerification($input, $pdo, $emailService, $otpManager) {
+    $email = $input['email'] ?? '';
+    
+    if (empty($email)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Email is required']);
+        return;
+    }
+    
+    // Check if user exists and is not already verified
+    $stmt = $pdo->prepare("SELECT username, is_verified FROM users WHERE email = ?");
+    $stmt->execute([$email]);
+    $user = $stmt->fetch();
+    
+    if (!$user) {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'message' => 'User not found']);
+        return;
+    }
+    
+    if ($user['is_verified']) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Email is already verified']);
+        return;
+    }
+    
+    if (EmailConfig::EMAIL_ENABLED) {
+        // Generate and send new verification OTP
+        $otp = $emailService->generateOTP();
+        $otpManager->storeOTP($email, $otp, 'verification');
+        
+        if ($emailService->sendVerificationEmail($email, $user['username'], $otp)) {
+            echo json_encode(['success' => true, 'message' => 'New verification code sent to your email']);
+        } else {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Failed to send verification email']);
+        }
+    } else {
+        echo json_encode(['success' => true, 'message' => 'Email verification is disabled. You can login directly.']);
     }
 }
 
@@ -183,9 +252,14 @@ function handleLogin($input, $pdo, $emailService, $otpManager) {
     $user = $stmt->fetch();
     
     if ($user && password_verify($password, $user['password'])) {
+        // Check if email verification is required
         if (!$user['is_verified'] && EmailConfig::EMAIL_ENABLED) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Please verify your email first']);
+            echo json_encode([
+                'success' => false, 
+                'message' => 'Please verify your email first',
+                'requiresVerification' => true
+            ]);
             return;
         }
         
@@ -221,13 +295,15 @@ function handleLogin($input, $pdo, $emailService, $otpManager) {
                     'id' => $user['id'],
                     'username' => $user['username'],
                     'email' => $user['email'],
-                    'role' => $user['role']
+                    'role' => $user['role'],
+                    'is_verified' => $user['is_verified'],
+                    'two_factor_enabled' => $user['two_factor_enabled']
                 ]
             ]);
         }
     } else {
         http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Invalid credentials']);
+        echo json_encode(['success' => false, 'message' => 'Invalid email or password']);
     }
 }
 
@@ -275,6 +351,13 @@ function handleResetPassword($input, $pdo, $otpManager) {
     if (empty($email) || empty($otp) || empty($newPassword)) {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Missing required fields']);
+        return;
+    }
+    
+    // Validate password strength
+    if (strlen($newPassword) < 6) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Password must be at least 6 characters long']);
         return;
     }
     
@@ -332,7 +415,9 @@ function handleVerify2FA($input, $pdo, $otpManager) {
                 'id' => $user['id'],
                 'username' => $user['username'],
                 'email' => $user['email'],
-                'role' => $user['role']
+                'role' => $user['role'],
+                'is_verified' => $user['is_verified'],
+                'two_factor_enabled' => $user['two_factor_enabled']
             ]
         ]);
     } else {

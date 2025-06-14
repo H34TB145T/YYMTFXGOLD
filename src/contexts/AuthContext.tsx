@@ -1,13 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types';
+import { authService } from '../services/authService';
 import { v4 as uuidv4 } from 'uuid';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
-  register: (email: string, password: string, fullName: string, phone: string) => Promise<{ success: boolean; message: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; message: string; requires2FA?: boolean; userId?: string; requiresVerification?: boolean }>;
+  register: (email: string, password: string, fullName: string, phone: string) => Promise<{ success: boolean; message: string; requiresVerification?: boolean }>;
   logout: () => void;
   updateUser: (updatedUser: User) => void;
 }
@@ -45,6 +46,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
+      // First try with the API service
+      const result = await authService.login(email, password);
+      
+      if (result.success) {
+        if (result.requires2FA) {
+          return { 
+            success: true, 
+            message: result.message,
+            requires2FA: true,
+            userId: result.userId
+          };
+        }
+        
+        if (result.requiresVerification) {
+          return {
+            success: false,
+            message: result.message,
+            requiresVerification: true
+          };
+        }
+        
+        if (result.token && result.user) {
+          localStorage.setItem('token', result.token);
+          setUser(result.user);
+          return { 
+            success: true, 
+            message: result.message
+          };
+        }
+      }
+      
+      // Fallback to localStorage for demo
       const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
       const user = users.find((u: User) => u.email === email);
       
@@ -59,7 +92,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         };
       }
       
-      return { success: false, message: 'Invalid email or password' };
+      return { success: false, message: result.message || 'Invalid email or password' };
     } catch (error) {
       console.error('Login error:', error);
       return { success: false, message: 'Login failed' };
@@ -68,6 +101,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (email: string, password: string, fullName: string, phone: string) => {
     try {
+      // First try with the API service
+      const result = await authService.register(email, password, fullName.toLowerCase().replace(/\s+/g, ''), fullName);
+      
+      if (result.success) {
+        return { 
+          success: true, 
+          message: result.message,
+          requiresVerification: result.requiresVerification && !result.autoVerified
+        };
+      }
+      
+      // Fallback to localStorage for demo
       const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
       
       if (users.some((u: User) => u.email === email)) {
@@ -96,7 +141,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       return { 
         success: true, 
-        message: 'Registration successful'
+        message: 'Registration successful',
+        requiresVerification: true
       };
     } catch (error) {
       console.error('Registration error:', error);
@@ -133,7 +179,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           transactions: user.transactions ?? [],
           positions: user.positions ?? [],
           username: user.username ?? user.full_name?.toLowerCase().replace(/\s+/g, ''),
-          twoFactorEnabled: user.twoFactorEnabled ?? false
+          twoFactorEnabled: user.twoFactorEnabled ?? false,
+          is_verified: user.is_verified ?? false
         };
       }
       

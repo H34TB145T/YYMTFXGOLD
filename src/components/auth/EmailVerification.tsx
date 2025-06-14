@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { emailService } from '../../services/emailService';
-import { Mail, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
+import { authService } from '../../services/authService';
+import { Mail, AlertCircle, CheckCircle, RefreshCw, Clock, Shield } from 'lucide-react';
 
 const EmailVerification: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -13,6 +13,7 @@ const EmailVerification: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
+  const [canResend, setCanResend] = useState(false);
 
   useEffect(() => {
     if (!email) {
@@ -24,7 +25,11 @@ const EmailVerification: React.FC = () => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
+          setCanResend(true);
           return 0;
+        }
+        if (prev === 540) { // Allow resend after 1 minute
+          setCanResend(true);
         }
         return prev - 1;
       });
@@ -50,15 +55,19 @@ const EmailVerification: React.FC = () => {
       return;
     }
 
-    const result = emailService.verifyOTP(email, otp, 'verification');
-    
-    if (result.success) {
-      setSuccess('Email verified successfully! Redirecting to login...');
-      setTimeout(() => {
-        navigate('/login?verified=true');
-      }, 2000);
-    } else {
-      setError(result.message);
+    try {
+      const result = await authService.verifyEmail(email, otp);
+      
+      if (result.success) {
+        setSuccess('Email verified successfully! Redirecting to login...');
+        setTimeout(() => {
+          navigate('/login?verified=true');
+        }, 2000);
+      } else {
+        setError(result.message);
+      }
+    } catch (error) {
+      setError('Verification failed. Please try again.');
     }
     
     setLoading(false);
@@ -67,15 +76,21 @@ const EmailVerification: React.FC = () => {
   const handleResendOTP = async () => {
     setResending(true);
     setError('');
+    setSuccess('');
     
-    const result = await emailService.sendVerificationEmail(email, 'User');
-    
-    if (result.success) {
-      setSuccess('New OTP sent to your email');
-      setTimeLeft(600); // Reset timer
-      setTimeout(() => setSuccess(''), 3000);
-    } else {
-      setError(result.message);
+    try {
+      const result = await authService.resendVerification(email);
+      
+      if (result.success) {
+        setSuccess('New verification code sent to your email');
+        setTimeLeft(600); // Reset timer
+        setCanResend(false);
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(result.message);
+      }
+    } catch (error) {
+      setError('Failed to resend verification code. Please try again.');
     }
     
     setResending(false);
@@ -85,8 +100,13 @@ const EmailVerification: React.FC = () => {
     <div className="min-h-screen bg-slate-900 flex items-center justify-center px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 bg-slate-800 p-6 rounded-lg shadow-lg">
         <div className="text-center">
-          <div className="flex justify-center">
-            <Mail className="h-12 w-12 text-emerald-500" />
+          <div className="flex justify-center mb-4">
+            <div className="relative">
+              <Mail className="h-16 w-16 text-emerald-500" />
+              <div className="absolute -top-1 -right-1 bg-blue-500 rounded-full p-1">
+                <Shield className="h-4 w-4 text-white" />
+              </div>
+            </div>
           </div>
           <h2 className="mt-4 text-3xl font-bold text-white">
             Verify Your Email
@@ -94,7 +114,10 @@ const EmailVerification: React.FC = () => {
           <p className="mt-2 text-sm text-gray-400">
             We've sent a 6-digit verification code to
           </p>
-          <p className="text-emerald-400 font-medium">{email}</p>
+          <p className="text-emerald-400 font-medium break-all">{email}</p>
+          <p className="mt-2 text-xs text-gray-500">
+            Check your inbox and spam folder
+          </p>
         </div>
 
         {error && (
@@ -125,13 +148,21 @@ const EmailVerification: React.FC = () => {
               className="block w-full bg-slate-700 border-gray-600 rounded-md py-3 px-4 text-white text-center text-2xl tracking-widest placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               placeholder="000000"
               autoComplete="one-time-code"
+              disabled={loading}
             />
           </div>
 
           <div className="text-center">
-            <p className="text-gray-400 text-sm mb-2">
-              Time remaining: <span className="text-emerald-400 font-mono">{formatTime(timeLeft)}</span>
-            </p>
+            <div className="flex items-center justify-center mb-2">
+              <Clock className="h-4 w-4 text-gray-400 mr-1" />
+              <p className="text-gray-400 text-sm">
+                {timeLeft > 0 ? (
+                  <>Time remaining: <span className="text-emerald-400 font-mono">{formatTime(timeLeft)}</span></>
+                ) : (
+                  <span className="text-red-400">Code expired</span>
+                )}
+              </p>
+            </div>
           </div>
 
           <button
@@ -140,26 +171,51 @@ const EmailVerification: React.FC = () => {
             className="w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? (
-              <RefreshCw className="h-5 w-5 animate-spin" />
+              <>
+                <RefreshCw className="h-5 w-5 animate-spin mr-2" />
+                Verifying...
+              </>
             ) : (
               'Verify Email'
             )}
           </button>
 
           <div className="text-center">
-            <p className="text-gray-400 text-sm">
-              Didn't receive the code?{' '}
-              <button
-                type="button"
-                onClick={handleResendOTP}
-                disabled={resending || timeLeft > 540} // Allow resend after 1 minute
-                className="text-emerald-500 hover:text-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {resending ? 'Sending...' : 'Resend OTP'}
-              </button>
+            <p className="text-gray-400 text-sm mb-2">
+              Didn't receive the code?
             </p>
+            <button
+              type="button"
+              onClick={handleResendOTP}
+              disabled={resending || !canResend}
+              className="text-emerald-500 hover:text-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+            >
+              {resending ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin inline mr-1" />
+                  Sending...
+                </>
+              ) : canResend ? (
+                'Resend verification code'
+              ) : (
+                `Resend available in ${formatTime(Math.max(0, 540 - (600 - timeLeft)))}`
+              )}
+            </button>
           </div>
         </form>
+
+        <div className="bg-slate-700 rounded-lg p-4">
+          <h3 className="text-white font-medium mb-2 flex items-center">
+            <Shield className="h-4 w-4 mr-2" />
+            Security Tips
+          </h3>
+          <ul className="text-gray-300 text-sm space-y-1">
+            <li>• Check your spam/junk folder</li>
+            <li>• The code expires in 10 minutes</li>
+            <li>• Each code can only be used once</li>
+            <li>• Contact support if you need help</li>
+          </ul>
+        </div>
 
         <div className="text-center">
           <button

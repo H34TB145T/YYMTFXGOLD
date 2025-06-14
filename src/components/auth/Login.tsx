@@ -2,16 +2,18 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import TwoFactorAuth from './TwoFactorAuth';
-import { Wallet, AlertCircle, CheckCircle } from 'lucide-react';
+import { Wallet, AlertCircle, CheckCircle, Eye, EyeOff, Mail, Lock } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [searchParams] = useSearchParams();
   const verified = searchParams.get('verified');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [show2FA, setShow2FA] = useState(false);
+  const [twoFAUserId, setTwoFAUserId] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -29,17 +31,22 @@ const Login: React.FC = () => {
     const result = await login(email, password);
     
     if (result.success) {
-      // Check if user has 2FA enabled (in production, this would come from the backend)
-      const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
-      const user = users.find((u: any) => u.email === email);
-      
-      if (user?.twoFactorEnabled) {
+      if (result.requires2FA && result.userId) {
+        setTwoFAUserId(result.userId);
         setShow2FA(true);
       } else {
         navigate('/dashboard');
       }
     } else {
-      setError(result.message);
+      if (result.requiresVerification) {
+        setError('Please verify your email first. Check your inbox for the verification code.');
+        // Optionally redirect to verification page
+        setTimeout(() => {
+          navigate(`/verify-email?email=${encodeURIComponent(email)}`);
+        }, 3000);
+      } else {
+        setError(result.message);
+      }
     }
     
     setLoading(false);
@@ -52,6 +59,7 @@ const Login: React.FC = () => {
 
   const handle2FACancel = () => {
     setShow2FA(false);
+    setTwoFAUserId('');
   };
 
   return (
@@ -90,32 +98,56 @@ const Login: React.FC = () => {
                 <label htmlFor="email" className="block text-sm font-medium text-gray-300">
                   Email Address
                 </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1 block w-full bg-slate-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                  placeholder="you@example.com"
-                />
+                <div className="mt-1 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="block w-full pl-10 bg-slate-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    placeholder="you@example.com"
+                    disabled={loading}
+                  />
+                </div>
               </div>
               
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-300">
                   Password
                 </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="mt-1 block w-full bg-slate-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                  placeholder="••••••••"
-                />
+                <div className="mt-1 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="block w-full pl-10 pr-10 bg-slate-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    placeholder="••••••••"
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowPassword(!showPassword)}
+                    disabled={loading}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-300" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-gray-400 hover:text-gray-300" />
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -130,7 +162,7 @@ const Login: React.FC = () => {
             <div>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !email || !password}
                 className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {loading ? 'Signing in...' : 'Sign in'}
@@ -147,10 +179,14 @@ const Login: React.FC = () => {
             </div>
           </form>
           
-          <div className="pt-4 text-center">
-            <p className="text-xs text-gray-500">
-              For demo purposes, any password will work with a registered email.
-            </p>
+          <div className="pt-4 border-t border-slate-700">
+            <div className="bg-slate-700 rounded-lg p-4">
+              <h3 className="text-white font-medium mb-2">Demo Accounts:</h3>
+              <div className="text-sm text-gray-300 space-y-1">
+                <p><strong>Admin:</strong> admin@fxgold.shop / password</p>
+                <p><strong>Note:</strong> Any password works with registered emails</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -158,6 +194,7 @@ const Login: React.FC = () => {
       {show2FA && (
         <TwoFactorAuth
           email={email}
+          userId={twoFAUserId}
           onSuccess={handle2FASuccess}
           onCancel={handle2FACancel}
         />
