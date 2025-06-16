@@ -22,9 +22,11 @@ interface EmailResponse {
 class EmailService {
   private config: EmailConfig;
   private emailEnabled: boolean;
+  private websiteUrl: string;
 
   constructor() {
     this.emailEnabled = true; // Enable email functionality
+    this.websiteUrl = 'https://fxgold.shop'; // Your actual website URL
     this.config = {
       host: 'smtp.gmail.com',
       port: 587,
@@ -197,7 +199,7 @@ class EmailService {
               
               <div class="instructions">
                 <strong>📋 How to verify your account:</strong>
-                1. Go back to the FxGold website<br>
+                1. Go back to <a href="${this.websiteUrl}" style="color: #2196f3;">fxgold.shop</a><br>
                 2. Enter the 6-digit code above in the verification field<br>
                 3. Click 'Verify Email' to complete your registration<br>
                 4. Start trading immediately after verification!
@@ -231,8 +233,8 @@ class EmailService {
               <p><strong>FxGold Trading Platform</strong></p>
               <p>&copy; 2024 FxGold Trading. All rights reserved.</p>
               <p style="margin-top: 15px; font-size: 12px;">This is an automated message, please do not reply to this email.</p>
-              <p style="font-size: 12px;">Need help? Contact us at <strong>support@fxgold.shop</strong></p>
-              <p style="font-size: 12px; margin-top: 10px;">📧 Email: fxgold.info@gmail.com | 🌐 Website: fxgold.shop</p>
+              <p style="font-size: 12px;">Need help? Contact us at <strong>admin@fxgold.shop</strong></p>
+              <p style="font-size: 12px; margin-top: 10px;">📧 Email: fxgold.info@gmail.com | 🌐 Website: <a href="${this.websiteUrl}" style="color: #10b981;">fxgold.shop</a></p>
             </div>
           </div>
         </body>
@@ -403,7 +405,7 @@ class EmailService {
               
               <div class="instructions">
                 <strong>📋 How to reset your password:</strong>
-                1. Go back to the FxGold password reset page<br>
+                1. Go back to <a href="${this.websiteUrl}" style="color: #856404;">fxgold.shop</a><br>
                 2. Enter the 6-digit code above<br>
                 3. Create a new secure password<br>
                 4. Confirm your new password<br>
@@ -436,8 +438,8 @@ class EmailService {
               <p><strong>FxGold Trading Platform - Security Center</strong></p>
               <p>&copy; 2024 FxGold Trading. All rights reserved.</p>
               <p style="margin-top: 15px; font-size: 12px;">This is an automated security message, please do not reply to this email.</p>
-              <p style="font-size: 12px;">Security concerns? Contact us at <strong>security@fxgold.shop</strong></p>
-              <p style="font-size: 12px; margin-top: 10px;">📧 Email: fxgold.info@gmail.com | 🌐 Website: fxgold.shop</p>
+              <p style="font-size: 12px;">Security concerns? Contact us at <strong>admin@fxgold.shop</strong></p>
+              <p style="font-size: 12px; margin-top: 10px;">📧 Email: fxgold.info@gmail.com | 🌐 Website: <a href="${this.websiteUrl}" style="color: #ef4444;">fxgold.shop</a></p>
             </div>
           </div>
         </body>
@@ -600,7 +602,7 @@ class EmailService {
               
               <div class="instructions">
                 <strong>📋 How to complete your login:</strong>
-                1. Go back to the FxGold login page<br>
+                1. Go back to <a href="${this.websiteUrl}" style="color: #0c4a6e;">fxgold.shop</a><br>
                 2. Enter the 6-digit code above<br>
                 3. Click 'Verify' to access your account<br>
                 4. Start trading securely!
@@ -632,8 +634,8 @@ class EmailService {
               <p><strong>FxGold Trading Platform - Security Center</strong></p>
               <p>&copy; 2024 FxGold Trading. All rights reserved.</p>
               <p style="margin-top: 15px; font-size: 12px;">This is an automated security message, please do not reply to this email.</p>
-              <p style="font-size: 12px;">Security concerns? Contact us at <strong>security@fxgold.shop</strong></p>
-              <p style="font-size: 12px; margin-top: 10px;">📧 Email: fxgold.info@gmail.com | 🌐 Website: fxgold.shop</p>
+              <p style="font-size: 12px;">Security concerns? Contact us at <strong>admin@fxgold.shop</strong></p>
+              <p style="font-size: 12px; margin-top: 10px;">📧 Email: fxgold.info@gmail.com | 🌐 Website: <a href="${this.websiteUrl}" style="color: #3b82f6;">fxgold.shop</a></p>
             </div>
           </div>
         </body>
@@ -650,6 +652,7 @@ class EmailService {
       console.log(`📧 Subject: ${template.subject}`);
       console.log(`📧 SMTP Config: ${this.config.host}:${this.config.port}`);
       console.log(`📧 From: ${this.config.auth.user}`);
+      console.log(`📧 Website URL: ${this.websiteUrl}`);
       
       // In production, you would use nodemailer or similar:
       /*

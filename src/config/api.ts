@@ -1,6 +1,6 @@
 // API configuration for production
 export const API_CONFIG = {
-  // Update this to your actual domain
+  // Updated to use your actual domain
   BASE_URL: process.env.NODE_ENV === 'production' 
     ? 'https://fxgold.shop/api' 
     : 'http://localhost/api',
