@@ -201,10 +201,12 @@ const Login: React.FC = () => {
           
           <div className="pt-4 border-t border-slate-700">
             <div className="bg-slate-700 rounded-lg p-4">
-              <h3 className="text-white font-medium mb-2">Demo Accounts:</h3>
+              <h3 className="text-white font-medium mb-2">🔐 Updated Admin Credentials:</h3>
               <div className="text-sm text-gray-300 space-y-1">
-                <p><strong>Admin:</strong> admin@fxgold.shop / password</p>
-                <p><strong>Note:</strong> Any password works with registered emails</p>
+                <p><strong>Email:</strong> admin@fxgold.shop</p>
+                <p><strong>Password:</strong> FxgoldAdmin123!@#</p>
+                <p><strong>Role:</strong> Administrator</p>
+                <p className="text-emerald-400 text-xs mt-2">✅ Password updated successfully</p>
               </div>
             </div>
           </div>

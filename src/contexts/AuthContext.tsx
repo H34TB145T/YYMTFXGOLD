@@ -32,6 +32,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Initialize admin user if not exists
+    initializeAdminUser();
+    
     const token = localStorage.getItem('token');
     if (token) {
       const currentUser = getCurrentUser(token);
@@ -44,6 +47,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(false);
   }, []);
 
+  const initializeAdminUser = () => {
+    const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
+    const adminExists = users.some((u: User) => u.email === 'admin@fxgold.shop');
+    
+    if (!adminExists) {
+      const adminUser: User = {
+        id: 'admin-fxgold-2024',
+        email: 'admin@fxgold.shop',
+        full_name: 'FxGold Administrator',
+        phone: '',
+        role: 'admin',
+        is_verified: true,
+        balance: 0,
+        usdtBalance: 0,
+        marginBalance: 0,
+        assets: [],
+        transactions: [],
+        positions: [],
+        username: 'fxgoldadmin',
+        twoFactorEnabled: false
+      };
+      
+      users.push(adminUser);
+      localStorage.setItem('freddyUsers', JSON.stringify(users));
+    }
+  };
+
   const login = async (email: string, password: string) => {
     try {
       // Get users from localStorage
@@ -54,18 +84,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { success: false, message: 'Invalid email or password' };
       }
 
-      // Check if user is verified
-      if (!user.is_verified) {
-        return { 
-          success: false, 
-          message: 'Please verify your email first. Check your inbox for the verification code.',
-          requiresVerification: true
-        };
+      // Check admin credentials
+      if (email === 'admin@fxgold.shop') {
+        if (password !== 'FxgoldAdmin123!@#') {
+          return { success: false, message: 'Invalid admin credentials' };
+        }
+      } else {
+        // Check if user is verified
+        if (!user.is_verified) {
+          return { 
+            success: false, 
+            message: 'Please verify your email first. Check your inbox for the verification code.',
+            requiresVerification: true
+          };
+        }
       }
 
-      // For demo purposes, any password works for existing users
-      // In production, you would verify the password hash
-      
       // Check if 2FA is enabled
       if (user.twoFactorEnabled) {
         // Send 2FA code
