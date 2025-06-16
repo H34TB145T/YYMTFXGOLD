@@ -149,6 +149,7 @@ const Register: React.FC = () => {
                   onChange={(e) => setUsername(e.target.value)}
                   className="block w-full pl-10 bg-slate-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                   placeholder="johndoe"
+                  disabled={loading}
                 />
               </div>
               {username && username.length < 3 && (
@@ -173,6 +174,7 @@ const Register: React.FC = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   className="block w-full pl-10 bg-slate-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                   placeholder="you@example.com"
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -194,11 +196,13 @@ const Register: React.FC = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   className="block w-full pl-10 pr-10 bg-slate-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                   placeholder="••••••••"
+                  disabled={loading}
                 />
                 <button
                   type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowPassword(!showPassword)}
+                  disabled={loading}
                 >
                   {showPassword ? (
                     <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-300" />
@@ -246,11 +250,13 @@ const Register: React.FC = () => {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="block w-full pl-10 pr-10 bg-slate-700 border-gray-600 rounded-md shadow-sm py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                   placeholder="••••••••"
+                  disabled={loading}
                 />
                 <button
                   type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  disabled={loading}
                 >
                   {showConfirmPassword ? (
                     <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-300" />
@@ -316,6 +322,17 @@ const Register: React.FC = () => {
             <a href="#" className="text-emerald-500 hover:text-emerald-400">Terms of Service</a>
             {' '}and{' '}
             <a href="#" className="text-emerald-500 hover:text-emerald-400">Privacy Policy</a>.
+          </p>
+        </div>
+
+        <div className="bg-slate-700 rounded-lg p-4">
+          <h3 className="text-white font-medium mb-2 flex items-center">
+            <Mail className="h-4 w-4 mr-2" />
+            Email Verification Required
+          </h3>
+          <p className="text-gray-300 text-sm">
+            After registration, you'll receive a verification email with a 6-digit code. 
+            Please check your inbox (and spam folder) to complete your account setup.
           </p>
         </div>
       </div>

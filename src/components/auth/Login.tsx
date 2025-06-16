@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import TwoFactorAuth from './TwoFactorAuth';
-import { Wallet, AlertCircle, CheckCircle, Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import ForgotPasswordModal from './ForgotPasswordModal';
+import { Wallet, AlertCircle, CheckCircle, Eye, EyeOff, Mail, Lock, Key } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -13,6 +14,7 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [show2FA, setShow2FA] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [twoFAUserId, setTwoFAUserId] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -24,6 +26,14 @@ const Login: React.FC = () => {
     
     if (!email || !password) {
       setError('Please fill in all fields');
+      setLoading(false);
+      return;
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address');
       setLoading(false);
       return;
     }
@@ -60,6 +70,11 @@ const Login: React.FC = () => {
   const handle2FACancel = () => {
     setShow2FA(false);
     setTwoFAUserId('');
+  };
+
+  const handleForgotPasswordSuccess = () => {
+    setShowForgotPassword(false);
+    setError('');
   };
 
   return (
@@ -153,9 +168,14 @@ const Login: React.FC = () => {
 
             <div className="flex items-center justify-between">
               <div className="text-sm">
-                <Link to="/forgot-password" className="font-medium text-emerald-500 hover:text-emerald-400">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="font-medium text-emerald-500 hover:text-emerald-400 flex items-center"
+                >
+                  <Key className="h-4 w-4 mr-1" />
                   Forgot your password?
-                </Link>
+                </button>
               </div>
             </div>
 
@@ -197,6 +217,13 @@ const Login: React.FC = () => {
           userId={twoFAUserId}
           onSuccess={handle2FASuccess}
           onCancel={handle2FACancel}
+        />
+      )}
+
+      {showForgotPassword && (
+        <ForgotPasswordModal
+          onClose={() => setShowForgotPassword(false)}
+          onSuccess={handleForgotPasswordSuccess}
         />
       )}
     </>

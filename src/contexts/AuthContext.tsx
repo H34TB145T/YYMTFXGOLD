@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types';
-import { authService } from '../services/authService';
+import { emailService } from '../services/emailService';
 import { v4 as uuidv4 } from 'uuid';
 
 interface AuthContextType {
@@ -46,53 +46,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      // First try with the API service
-      const result = await authService.login(email, password);
-      
-      if (result.success) {
-        if (result.requires2FA) {
-          return { 
-            success: true, 
-            message: result.message,
-            requires2FA: true,
-            userId: result.userId
-          };
-        }
-        
-        if (result.requiresVerification) {
-          return {
-            success: false,
-            message: result.message,
-            requiresVerification: true
-          };
-        }
-        
-        if (result.token && result.user) {
-          localStorage.setItem('token', result.token);
-          setUser(result.user);
-          return { 
-            success: true, 
-            message: result.message
-          };
-        }
-      }
-      
-      // Fallback to localStorage for demo
+      // Get users from localStorage
       const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
       const user = users.find((u: User) => u.email === email);
       
-      if (user) {
-        // For demo purposes, any password works
-        const token = `demo-token-${user.id}`;
-        localStorage.setItem('token', token);
-        setUser(user);
+      if (!user) {
+        return { success: false, message: 'Invalid email or password' };
+      }
+
+      // Check if user is verified
+      if (!user.is_verified) {
         return { 
-          success: true, 
-          message: 'Login successful'
+          success: false, 
+          message: 'Please verify your email first. Check your inbox for the verification code.',
+          requiresVerification: true
         };
       }
+
+      // For demo purposes, any password works for existing users
+      // In production, you would verify the password hash
       
-      return { success: false, message: result.message || 'Invalid email or password' };
+      // Check if 2FA is enabled
+      if (user.twoFactorEnabled) {
+        // Send 2FA code
+        const result = await emailService.send2FAEmail(email, user.username || user.full_name);
+        if (result.success) {
+          return { 
+            success: true, 
+            message: '2FA code sent to your email',
+            requires2FA: true,
+            userId: user.id
+          };
+        } else {
+          return { success: false, message: 'Failed to send 2FA code' };
+        }
+      }
+
+      // Regular login without 2FA
+      const token = `demo-token-${user.id}`;
+      localStorage.setItem('token', token);
+      setUser(user);
+      
+      return { 
+        success: true, 
+        message: 'Login successful'
+      };
     } catch (error) {
       console.error('Login error:', error);
       return { success: false, message: 'Login failed' };
@@ -101,31 +99,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (email: string, password: string, fullName: string, phone: string) => {
     try {
-      // First try with the API service
-      const result = await authService.register(email, password, fullName.toLowerCase().replace(/\s+/g, ''), fullName);
-      
-      if (result.success) {
-        return { 
-          success: true, 
-          message: result.message,
-          requiresVerification: result.requiresVerification && !result.autoVerified
-        };
-      }
-      
-      // Fallback to localStorage for demo
+      // Get existing users
       const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
       
+      // Check if user already exists
       if (users.some((u: User) => u.email === email)) {
         return { success: false, message: 'Email already registered' };
       }
-      
+
+      // Create new user
       const newUser: User = {
         id: uuidv4(),
         email,
         full_name: fullName,
         phone,
         role: 'user',
-        is_verified: false,
+        is_verified: false, // Require email verification
         balance: 1000, // Starting balance for demo
         usdtBalance: 0,
         marginBalance: 0,
@@ -136,14 +125,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         twoFactorEnabled: false
       };
       
+      // Save user to localStorage
       users.push(newUser);
       localStorage.setItem('freddyUsers', JSON.stringify(users));
+
+      // Send verification email
+      const emailResult = await emailService.sendVerificationEmail(email, newUser.username || newUser.full_name);
       
-      return { 
-        success: true, 
-        message: 'Registration successful',
-        requiresVerification: true
-      };
+      if (emailResult.success) {
+        return { 
+          success: true, 
+          message: 'Registration successful! Please check your email for verification code.',
+          requiresVerification: true
+        };
+      } else {
+        return { 
+          success: true, 
+          message: 'Registration successful but failed to send verification email. Please contact support.',
+          requiresVerification: true
+        };
+      }
     } catch (error) {
       console.error('Registration error:', error);
       return { success: false, message: 'Registration failed' };
