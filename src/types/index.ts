@@ -19,7 +19,7 @@ export interface User {
 export interface Order {
   id: string;
   userId: string;
-  type: 'buy' | 'sell';
+  type: 'buy' | 'sell' | 'long' | 'short';
   cryptoType: string;
   amount: number;
   priceUsd: number;

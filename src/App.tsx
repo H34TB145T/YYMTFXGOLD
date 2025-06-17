@@ -13,6 +13,7 @@ import Dashboard from './components/dashboard/Dashboard';
 import TradingInterface from './components/trading/TradingInterface';
 import Transactions from './components/transactions/Transactions';
 import Profile from './components/profile/Profile';
+import AdminDashboard from './components/admin/AdminDashboard';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
 function App() {
@@ -34,6 +35,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <Dashboard />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin" 
+                  element={
+                    <ProtectedRoute>
+                      <AdminDashboard />
                     </ProtectedRoute>
                   } 
                 />
