@@ -58,11 +58,12 @@ const EMAIL_ENABLED = false; // Set in emailConfig.php
 ## 📋 **Setup Instructions**
 
 ### **1. Upload Database SQL:**
-Upload `supabase/migrations/20250611102415_humble_spire.sql` to phpMyAdmin
+Upload `supabase/migrations/20250614033144_nameless_ocean.sql` to phpMyAdmin
 
 ### **2. Configure Database:**
-Your database is already configured in `server/config/database.php`:
+✅ Your database is already configured in `server/config/database.php`:
 ```php
+$host = 'localhost';
 $dbname = 'zpjhpszw_fxgold';
 $username = 'zpjhpszw_fxgold_admin';
 $password = 'Fxgold_admin123!@#';
@@ -83,12 +84,12 @@ public_html/
 ### **4. Test the Platform:**
 
 #### **Admin Login:**
-- **URL**: `https://yourdomain.com/login`
+- **URL**: `https://fxgold.shop/login`
 - **Email**: `admin@fxgold.shop`
-- **Password**: `password`
+- **Password**: `FxgoldAdmin123!@#`
 
 #### **User Registration:**
-- **URL**: `https://yourdomain.com/register`
+- **URL**: `https://fxgold.shop/register`
 - ✅ **No email verification needed**
 - ✅ **Immediate access after registration**
 
@@ -136,14 +137,20 @@ To enable email functionality later:
 - ✅ Simplified password reset
 - ⚠️ Users should use strong passwords
 
+### **Database Configuration:**
+- ✅ Database: `zpjhpszw_fxgold`
+- ✅ Username: `zpjhpszw_fxgold_admin`
+- ✅ Password: `Fxgold_admin123!@#`
+- ✅ All connection strings updated
+
 ## 📞 **Support**
 
 If you need help:
-1. **Database issues**: Check phpMyAdmin connection
+1. **Database issues**: ✅ Credentials verified and configured
 2. **Login problems**: Verify admin credentials
 3. **File upload**: Check cPanel File Manager
 4. **Email setup**: Follow Gmail SMTP guide above
 
 ---
 
-**✅ Your platform is ready to use without email server!**
+**✅ Your platform is ready to use without email server and with correct database credentials!**

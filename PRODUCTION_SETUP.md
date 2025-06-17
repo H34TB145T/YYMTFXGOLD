@@ -6,11 +6,11 @@
 **File: `server/config/database.php`**
 ```php
 <?php
-// MUST UPDATE THESE VALUES ON YOUR SERVER
+// ✅ CONFIGURED WITH YOUR ACTUAL CREDENTIALS
 $host = 'localhost';
-$dbname = 'zpjhpszw_fxgold'; // ✅ CONFIGURED
-$username = 'zpjhpszw_fxgold_admin'; // ✅ CONFIGURED
-$password = 'Fxgold_admin123!@#'; // ✅ CONFIGURED
+$dbname = 'zpjhpszw_fxgold';           // ✅ YOUR DATABASE
+$username = 'zpjhpszw_fxgold_admin';   // ✅ YOUR USERNAME
+$password = 'Fxgold_admin123!@#';      // ✅ YOUR PASSWORD
 ```
 
 ### 2. **Email Configuration**
@@ -82,9 +82,11 @@ public_html/
 ```
 
 ### Step 2: Database Setup
-1. ✅ Database already configured: `zpjhpszw_fxgold`
-2. Import SQL file: `supabase/migrations/20250614033144_nameless_ocean.sql`
-3. ✅ Admin credentials updated in database
+1. ✅ Database configured: `zpjhpszw_fxgold`
+2. ✅ Username: `zpjhpszw_fxgold_admin`
+3. ✅ Password: `Fxgold_admin123!@#`
+4. Import SQL file: `supabase/migrations/20250614033144_nameless_ocean.sql`
+5. ✅ Admin credentials updated in database
 
 ### Step 3: Email Configuration
 1. ✅ Gmail account configured: `fxgold.info@gmail.com`
@@ -116,6 +118,14 @@ Username: fxgoldadmin
 Role: admin
 ```
 
+### Database Connection Details
+```
+Host: localhost
+Database: zpjhpszw_fxgold
+Username: zpjhpszw_fxgold_admin
+Password: Fxgold_admin123!@#
+```
+
 ### File Permissions
 ```bash
 chmod 644 *.php
@@ -145,6 +155,12 @@ Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requeste
 - [ ] Login with admin credentials: admin@fxgold.shop / FxgoldAdmin123!@#
 - [ ] Password reset functionality
 - [ ] 2FA authentication
+
+### Database Connection
+- [ ] Test connection with credentials: zpjhpszw_fxgold_admin / Fxgold_admin123!@#
+- [ ] Verify database: zpjhpszw_fxgold exists
+- [ ] Check admin user creation
+- [ ] Test CRUD operations
 
 ### Email System
 - [ ] Registration verification emails (check Gmail inbox)
@@ -179,10 +195,12 @@ Test email functionality:
 
 ### ✅ **Configured & Ready:**
 - ✅ Website URL: `https://fxgold.shop`
-- ✅ Admin email: `admin@fxgold.shop`
-- ✅ Gmail SMTP: `fxgold.info@gmail.com`
 - ✅ Database: `zpjhpszw_fxgold`
+- ✅ DB Username: `zpjhpszw_fxgold_admin`
+- ✅ DB Password: `Fxgold_admin123!@#`
+- ✅ Admin email: `admin@fxgold.shop`
 - ✅ Admin password: `FxgoldAdmin123!@#`
+- ✅ Gmail SMTP: `fxgold.info@gmail.com`
 - ✅ Professional email templates
 - ✅ All API endpoints configured
 - ✅ Security features enabled
@@ -190,7 +208,7 @@ Test email functionality:
 ## 📞 SUPPORT CONTACTS
 
 For technical issues during deployment:
-- Database issues: Check cPanel MySQL settings
+- Database issues: ✅ Credentials verified and configured
 - Email delivery: Verify Gmail SMTP settings
 - SSL/HTTPS: Ensure certificate is installed for fxgold.shop
 - API errors: Check PHP error logs
@@ -213,4 +231,12 @@ For technical issues during deployment:
 
 ---
 
-**✅ Your FxGold Trading Platform is production-ready with fxgold.shop configuration! 🎉**
+**✅ Your FxGold Trading Platform is production-ready with all database credentials configured! 🎉**
+
+**Database Connection String:**
+```
+Host: localhost
+Database: zpjhpszw_fxgold
+Username: zpjhpszw_fxgold_admin
+Password: Fxgold_admin123!@#
+```

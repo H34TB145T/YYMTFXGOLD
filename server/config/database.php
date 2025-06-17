@@ -1,5 +1,5 @@
 <?php
-// Database configuration - Updated for new admin password
+// Database configuration - Updated with your actual credentials
 $host = 'localhost';
 $dbname = 'zpjhpszw_fxgold';
 $username = 'zpjhpszw_fxgold_admin';
