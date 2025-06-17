@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Wallet, BarChart2, LogOut, User, Menu, X, RefreshCw } from 'lucide-react';
+import { Wallet, BarChart2, LogOut, User, Menu, X, RefreshCw, Shield } from 'lucide-react';
 
 const Navbar: React.FC = () => {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -69,6 +69,15 @@ const Navbar: React.FC = () => {
                 >
                   Profile
                 </Link>
+                {user?.role === 'admin' && (
+                  <Link 
+                    to="/admin" 
+                    className={`px-3 py-2 rounded-md text-sm font-medium flex items-center ${location.pathname === '/admin' ? 'text-white bg-slate-700' : 'text-gray-300 hover:bg-slate-800 hover:text-white'}`}
+                  >
+                    <Shield className="h-4 w-4 mr-1" />
+                    Admin
+                  </Link>
+                )}
                 <button
                   onClick={handleLogout}
                   className="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-slate-800 hover:text-white"
@@ -149,6 +158,17 @@ const Navbar: React.FC = () => {
                   Profile
                 </div>
               </Link>
+              {user?.role === 'admin' && (
+                <Link 
+                  to="/admin" 
+                  className={`block px-3 py-2 rounded-md text-base font-medium ${location.pathname === '/admin' ? 'text-white bg-slate-700' : 'text-gray-300 hover:bg-slate-700 hover:text-white'}`}
+                >
+                  <div className="flex items-center">
+                    <Shield className="h-5 w-5 mr-2" />
+                    Admin Panel
+                  </div>
+                </Link>
+              )}
               <button
                 onClick={handleLogout}
                 className="w-full text-left block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-slate-700 hover:text-white"
