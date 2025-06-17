@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCrypto } from '../../contexts/CryptoContext';
 import { Cryptocurrency } from '../../types';
 import { formatCurrency, formatCryptoAmount } from '../../utils/helpers';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Wallet, Copy, CheckCircle, QrCode } from 'lucide-react';
 
 interface FuturesTradingProps {
   selectedCrypto: Cryptocurrency;
@@ -17,6 +17,15 @@ const FuturesTrading: React.FC<FuturesTradingProps> = ({ selectedCrypto, onTrade
   const [tradeType, setTradeType] = useState<'long' | 'short'>('long');
   const [walletAddress, setWalletAddress] = useState('');
   const [error, setError] = useState('');
+  const [showPaymentDetails, setShowPaymentDetails] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Admin USDT wallet addresses for margin payments
+  const adminUSDTWallets = {
+    TRC20: '0x0b1aacd7f24c5dde9df5eb9a4d714b6a634e2f0e',
+    ERC20: '0x0b1aacd7f24c5dde9df5eb9a4d714b6a634e2f0e',
+    BEP20: '0x0b1aacd7f24c5dde9df5eb9a4d714b6a634e2f0e'
+  };
 
   const total = amount ? parseFloat(amount) * selectedCrypto.price : 0;
   const margin = total / leverage;
@@ -51,6 +60,16 @@ const FuturesTrading: React.FC<FuturesTradingProps> = ({ selectedCrypto, onTrade
     }
   };
 
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
   const handleSubmit = () => {
     if (!amount) {
       setError('Please enter an amount');
@@ -65,10 +84,161 @@ const FuturesTrading: React.FC<FuturesTradingProps> = ({ selectedCrypto, onTrade
       setError('Please enter a valid amount');
       return;
     }
+    setShowPaymentDetails(true);
+  };
+
+  const confirmTrade = () => {
+    const amountValue = parseFloat(amount);
     onTrade(tradeType, amountValue, leverage, walletAddress);
     setAmount('');
     setWalletAddress('');
+    setShowPaymentDetails(false);
   };
+
+  if (showPaymentDetails) {
+    return (
+      <div className="bg-slate-800 rounded-lg p-6">
+        <div className="text-center mb-6">
+          <div className="flex justify-center mb-4">
+            <QrCode className="h-12 w-12 text-blue-500" />
+          </div>
+          <h3 className="text-xl font-bold text-white mb-2">Fund Your Futures Position</h3>
+          <p className="text-gray-400">Send margin payment to open your {tradeType} position</p>
+        </div>
+
+        <div className="bg-slate-700 rounded-lg p-4 mb-6">
+          <h4 className="text-white font-medium mb-3">Position Summary</h4>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-400">Position Type:</span>
+              <span className={`font-medium ${tradeType === 'long' ? 'text-emerald-400' : 'text-red-400'}`}>
+                {tradeType.toUpperCase()} {selectedCrypto.symbol}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Position Size:</span>
+              <span className="text-white">{formatCryptoAmount(parseFloat(amount), selectedCrypto.symbol)} {selectedCrypto.symbol}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Leverage:</span>
+              <span className="text-white">{leverage}x</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Entry Price:</span>
+              <span className="text-white">{formatCurrency(selectedCrypto.price)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Liquidation Price:</span>
+              <span className="text-red-400">{formatCurrency(liquidationPrice)}</span>
+            </div>
+            <div className="flex justify-between border-t border-slate-600 pt-2">
+              <span className="text-gray-400 font-medium">Required Margin:</span>
+              <span className="text-blue-400 font-bold">{formatCurrency(margin)} USDT</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Profit Wallet:</span>
+              <span className="text-white text-xs break-all">{walletAddress}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-slate-700 rounded-lg p-4 mb-6">
+          <h4 className="text-white font-medium mb-3 flex items-center">
+            <Wallet className="h-4 w-4 mr-2" />
+            Margin Payment Instructions
+          </h4>
+          
+          <div className="space-y-3">
+            <p className="text-gray-300 text-sm">Send <strong>{formatCurrency(margin)} USDT</strong> to any of these addresses:</p>
+            
+            <div className="space-y-3">
+              <div className="bg-slate-800 rounded p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-emerald-400 mb-1">USDT (TRC20) - Recommended</p>
+                    <p className="text-white font-mono text-sm break-all">{adminUSDTWallets.TRC20}</p>
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(adminUSDTWallets.TRC20)}
+                    className="ml-2 text-gray-400 hover:text-white"
+                  >
+                    {copied ? <CheckCircle className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-slate-800 rounded p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-blue-400 mb-1">USDT (ERC20)</p>
+                    <p className="text-white font-mono text-sm break-all">{adminUSDTWallets.ERC20}</p>
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(adminUSDTWallets.ERC20)}
+                    className="ml-2 text-gray-400 hover:text-white"
+                  >
+                    {copied ? <CheckCircle className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-slate-800 rounded p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-yellow-400 mb-1">USDT (BEP20)</p>
+                    <p className="text-white font-mono text-sm break-all">{adminUSDTWallets.BEP20}</p>
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(adminUSDTWallets.BEP20)}
+                    className="ml-2 text-gray-400 hover:text-white"
+                  >
+                    {copied ? <CheckCircle className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-6">
+          <h4 className="text-blue-400 font-medium mb-2">⚠️ Important Futures Trading Instructions:</h4>
+          <ul className="text-blue-300 text-sm space-y-1">
+            <li>• Send exactly: <strong>{formatCurrency(margin)} USDT</strong> as margin</li>
+            <li>• Position will be opened after payment confirmation</li>
+            <li>• Profits/losses will be sent to: <strong>{walletAddress}</strong></li>
+            <li>• Monitor liquidation price: <strong>{formatCurrency(liquidationPrice)}</strong></li>
+            <li>• Higher leverage = higher risk and potential rewards</li>
+            <li>• Position processing time: 10-30 minutes</li>
+          </ul>
+        </div>
+
+        <div className="flex space-x-3">
+          <button
+            onClick={() => setShowPaymentDetails(false)}
+            className="flex-1 bg-slate-700 hover:bg-slate-600 text-white rounded-md px-4 py-3 font-medium transition-colors"
+          >
+            Back to Order
+          </button>
+          <button
+            onClick={confirmTrade}
+            className={`flex-1 rounded-md px-4 py-3 font-medium transition-colors ${
+              tradeType === 'long'
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                : 'bg-red-600 hover:bg-red-700 text-white'
+            }`}
+          >
+            I've Sent Margin
+          </button>
+        </div>
+
+        <div className="mt-4 text-center">
+          <p className="text-gray-400 text-xs">
+            Need help? Contact support at <span className="text-blue-400">admin@fxgold.shop</span>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-slate-800 rounded-lg p-6">
@@ -161,8 +331,8 @@ const FuturesTrading: React.FC<FuturesTradingProps> = ({ selectedCrypto, onTrade
         <div className="mb-4">
           <label htmlFor="walletAddress" className="block text-sm font-medium text-gray-300 mb-2">
             {tradeType === 'long' 
-              ? `Your ${selectedCrypto.symbol} Wallet Address to Receive`
-              : 'Your USDT Wallet Address to Receive'}
+              ? `Your ${selectedCrypto.symbol} Wallet Address for Profits`
+              : 'Your USDT Wallet Address for Profits'}
           </label>
           <input
             id="walletAddress"
@@ -170,7 +340,7 @@ const FuturesTrading: React.FC<FuturesTradingProps> = ({ selectedCrypto, onTrade
             value={walletAddress}
             onChange={handleWalletAddressChange}
             className="block w-full bg-slate-700 border-gray-600 rounded-md py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-            placeholder={`Enter ${tradeType === 'long' ? selectedCrypto.symbol : 'USDT'} wallet address`}
+            placeholder={`Enter ${tradeType === 'long' ? selectedCrypto.symbol : 'USDT'} wallet address for profits`}
           />
         </div>
 
@@ -185,15 +355,15 @@ const FuturesTrading: React.FC<FuturesTradingProps> = ({ selectedCrypto, onTrade
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">Liquidation Price</span>
-            <span className="text-white">{formatCurrency(liquidationPrice)}</span>
+            <span className="text-red-400">{formatCurrency(liquidationPrice)}</span>
           </div>
         </div>
 
         <button
           onClick={handleSubmit}
-          disabled={!canTrade || !amount || !walletAddress}
+          disabled={!amount || !walletAddress}
           className={`w-full py-3 rounded-md font-medium transition-colors ${
-            canTrade && amount && walletAddress
+            amount && walletAddress
               ? tradeType === 'long'
                 ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                 : 'bg-red-600 hover:bg-red-700 text-white'
@@ -210,7 +380,8 @@ const FuturesTrading: React.FC<FuturesTradingProps> = ({ selectedCrypto, onTrade
             <li>Choose your leverage (higher leverage = higher risk)</li>
             <li>Enter the position size</li>
             <li>Provide your wallet address for receiving profits</li>
-            <li>Submit the order and wait for admin confirmation</li>
+            <li>Send USDT margin to our admin wallet</li>
+            <li>Position will be opened after payment confirmation</li>
           </ol>
         </div>
       </div>

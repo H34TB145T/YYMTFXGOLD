@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCrypto } from '../../contexts/CryptoContext';
 import { Cryptocurrency } from '../../types';
 import { formatCurrency, formatCryptoAmount } from '../../utils/helpers';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Wallet, Copy, CheckCircle, QrCode } from 'lucide-react';
 
 interface SpotTradingProps {
   selectedCrypto: Cryptocurrency;
@@ -16,6 +16,19 @@ const SpotTrading: React.FC<SpotTradingProps> = ({ selectedCrypto, onTrade }) =>
   const [walletAddress, setWalletAddress] = useState('');
   const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
   const [error, setError] = useState('');
+  const [showPaymentDetails, setShowPaymentDetails] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Admin wallet addresses for receiving payments
+  const adminWallets = {
+    USDT: {
+      TRC20: '0x0b1aacd7f24c5dde9df5eb9a4d714b6a634e2f0e',
+      ERC20: '0x0b1aacd7f24c5dde9df5eb9a4d714b6a634e2f0e',
+      BEP20: '0x0b1aacd7f24c5dde9df5eb9a4d714b6a634e2f0e'
+    },
+    BTC: 'bc1qj4pash8heu35j9s9e4afsq4jfw25und9kkml4w70wezwx3y4gvus558seq',
+    ETH: '0x0b1aacd7f24c5dde9df5eb9a4d714b6a634e2f0e'
+  };
 
   const userAsset = user?.assets.find(asset => asset.coinId === selectedCrypto.id);
   const total = amount ? parseFloat(amount) * selectedCrypto.price : 0;
@@ -46,6 +59,16 @@ const SpotTrading: React.FC<SpotTradingProps> = ({ selectedCrypto, onTrade }) =>
     }
   };
 
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
   const handleSubmit = () => {
     if (!amount) {
       setError('Please enter an amount');
@@ -60,10 +83,195 @@ const SpotTrading: React.FC<SpotTradingProps> = ({ selectedCrypto, onTrade }) =>
       setError('Please enter a valid amount');
       return;
     }
+
+    if (tradeType === 'buy') {
+      setShowPaymentDetails(true);
+    } else {
+      onTrade(tradeType, amountValue, walletAddress);
+      setAmount('');
+      setWalletAddress('');
+    }
+  };
+
+  const confirmPurchase = () => {
+    const amountValue = parseFloat(amount);
     onTrade(tradeType, amountValue, walletAddress);
     setAmount('');
     setWalletAddress('');
+    setShowPaymentDetails(false);
   };
+
+  if (showPaymentDetails && tradeType === 'buy') {
+    return (
+      <div className="bg-slate-800 rounded-lg p-6">
+        <div className="text-center mb-6">
+          <div className="flex justify-center mb-4">
+            <QrCode className="h-12 w-12 text-emerald-500" />
+          </div>
+          <h3 className="text-xl font-bold text-white mb-2">Complete Your Purchase</h3>
+          <p className="text-gray-400">Send payment to complete your {selectedCrypto.symbol} purchase</p>
+        </div>
+
+        <div className="bg-slate-700 rounded-lg p-4 mb-6">
+          <h4 className="text-white font-medium mb-3">Order Summary</h4>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-400">Cryptocurrency:</span>
+              <span className="text-white">{selectedCrypto.name} ({selectedCrypto.symbol})</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Amount:</span>
+              <span className="text-white">{formatCryptoAmount(parseFloat(amount), selectedCrypto.symbol)} {selectedCrypto.symbol}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Price per {selectedCrypto.symbol}:</span>
+              <span className="text-white">{formatCurrency(selectedCrypto.price)}</span>
+            </div>
+            <div className="flex justify-between border-t border-slate-600 pt-2">
+              <span className="text-gray-400 font-medium">Total Payment:</span>
+              <span className="text-emerald-400 font-bold">{formatCurrency(total)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Your Wallet:</span>
+              <span className="text-white text-xs break-all">{walletAddress}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-slate-700 rounded-lg p-4 mb-6">
+          <h4 className="text-white font-medium mb-3 flex items-center">
+            <Wallet className="h-4 w-4 mr-2" />
+            Payment Instructions
+          </h4>
+          
+          {selectedCrypto.symbol === 'BTC' && (
+            <div className="space-y-3">
+              <p className="text-gray-300 text-sm">Send <strong>{formatCurrency(total)}</strong> worth of Bitcoin to:</p>
+              <div className="bg-slate-800 rounded p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Bitcoin Address:</p>
+                    <p className="text-white font-mono text-sm break-all">{adminWallets.BTC}</p>
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(adminWallets.BTC)}
+                    className="ml-2 text-gray-400 hover:text-white"
+                  >
+                    {copied ? <CheckCircle className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {selectedCrypto.symbol === 'ETH' && (
+            <div className="space-y-3">
+              <p className="text-gray-300 text-sm">Send <strong>{formatCurrency(total)}</strong> worth of Ethereum to:</p>
+              <div className="bg-slate-800 rounded p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Ethereum Address:</p>
+                    <p className="text-white font-mono text-sm break-all">{adminWallets.ETH}</p>
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(adminWallets.ETH)}
+                    className="ml-2 text-gray-400 hover:text-white"
+                  >
+                    {copied ? <CheckCircle className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {selectedCrypto.symbol !== 'BTC' && selectedCrypto.symbol !== 'ETH' && (
+            <div className="space-y-3">
+              <p className="text-gray-300 text-sm">Send <strong>{formatCurrency(total)}</strong> in USDT to any of these addresses:</p>
+              
+              <div className="space-y-3">
+                <div className="bg-slate-800 rounded p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-emerald-400 mb-1">USDT (TRC20) - Recommended</p>
+                      <p className="text-white font-mono text-sm break-all">{adminWallets.USDT.TRC20}</p>
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(adminWallets.USDT.TRC20)}
+                      className="ml-2 text-gray-400 hover:text-white"
+                    >
+                      {copied ? <CheckCircle className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-slate-800 rounded p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-blue-400 mb-1">USDT (ERC20)</p>
+                      <p className="text-white font-mono text-sm break-all">{adminWallets.USDT.ERC20}</p>
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(adminWallets.USDT.ERC20)}
+                      className="ml-2 text-gray-400 hover:text-white"
+                    >
+                      {copied ? <CheckCircle className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-slate-800 rounded p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-yellow-400 mb-1">USDT (BEP20)</p>
+                      <p className="text-white font-mono text-sm break-all">{adminWallets.USDT.BEP20}</p>
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(adminWallets.USDT.BEP20)}
+                      className="ml-2 text-gray-400 hover:text-white"
+                    >
+                      {copied ? <CheckCircle className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-lg p-4 mb-6">
+          <h4 className="text-emerald-400 font-medium mb-2">⚠️ Important Payment Instructions:</h4>
+          <ul className="text-emerald-300 text-sm space-y-1">
+            <li>• Send the exact amount: <strong>{formatCurrency(total)}</strong></li>
+            <li>• Use the correct network to avoid loss of funds</li>
+            <li>• Your {selectedCrypto.symbol} will be sent to: <strong>{walletAddress}</strong></li>
+            <li>• Processing time: 10-30 minutes after payment confirmation</li>
+            <li>• Keep your transaction hash for reference</li>
+          </ul>
+        </div>
+
+        <div className="flex space-x-3">
+          <button
+            onClick={() => setShowPaymentDetails(false)}
+            className="flex-1 bg-slate-700 hover:bg-slate-600 text-white rounded-md px-4 py-3 font-medium transition-colors"
+          >
+            Back to Order
+          </button>
+          <button
+            onClick={confirmPurchase}
+            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md px-4 py-3 font-medium transition-colors"
+          >
+            I've Sent Payment
+          </button>
+        </div>
+
+        <div className="mt-4 text-center">
+          <p className="text-gray-400 text-xs">
+            Need help? Contact support at <span className="text-emerald-400">admin@fxgold.shop</span>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-slate-800 rounded-lg p-6">
@@ -165,9 +373,9 @@ const SpotTrading: React.FC<SpotTradingProps> = ({ selectedCrypto, onTrade }) =>
 
         <button
           onClick={handleSubmit}
-          disabled={!canTrade || !amount || !walletAddress}
+          disabled={!amount || !walletAddress}
           className={`w-full py-3 rounded-md font-medium transition-colors ${
-            canTrade && amount && walletAddress
+            amount && walletAddress
               ? tradeType === 'buy'
                 ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                 : 'bg-red-600 hover:bg-red-700 text-white'
@@ -183,8 +391,9 @@ const SpotTrading: React.FC<SpotTradingProps> = ({ selectedCrypto, onTrade }) =>
             <ol className="list-decimal list-inside text-sm text-gray-300 space-y-2">
               <li>Enter the amount of {selectedCrypto.symbol} you want to buy</li>
               <li>Enter your {selectedCrypto.symbol} wallet address where you want to receive the coins</li>
-              <li>Send USDT to our admin wallet address</li>
-              <li>Your order will be processed once payment is confirmed</li>
+              <li>Click "Buy {selectedCrypto.symbol}" to see payment instructions</li>
+              <li>Send payment to our admin wallet address</li>
+              <li>Confirm payment and wait for processing (10-30 minutes)</li>
               <li>You will receive your {selectedCrypto.symbol} in your provided wallet address</li>
             </ol>
           </div>
