@@ -1,15 +1,21 @@
 <?php
-// Email configuration for FxGold Trading Platform
+// Email configuration for FxGold Trading Platform with PHPMailer
+require_once 'vendor/autoload.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
 class EmailConfig {
-    // SMTP Configuration - Using Gmail SMTP
+    // Gmail SMTP Configuration
     const SMTP_HOST = 'smtp.gmail.com';
     const SMTP_PORT = 587;
     const SMTP_USERNAME = 'fxgold.info@gmail.com'; // Your Gmail account
-    const SMTP_PASSWORD = 'svlw ypaq dqlv vzqz'; // Gmail App Password
+    const SMTP_PASSWORD = 'svlw ypaq dqlv vzqz'; // Your Gmail App Password
     const SMTP_ENCRYPTION = 'tls';
     
     // Email settings - Updated with your domain
-    const FROM_EMAIL = 'noreply@fxgold.shop';
+    const FROM_EMAIL = 'fxgold.info@gmail.com';
     const FROM_NAME = 'FxGold Trading';
     const REPLY_TO = 'admin@fxgold.shop';
     
@@ -22,10 +28,10 @@ class EmailConfig {
     const OTP_2FA_EXPIRY_MINUTES = 5;
     
     // Email feature toggle - SET TO TRUE TO ENABLE EMAIL VERIFICATION
-    const EMAIL_ENABLED = true; // Set to true to enable email verification
+    const EMAIL_ENABLED = true; // Set to true to enable PHPMailer email verification
 }
 
-// Email service class with Gmail SMTP
+// Email service class with PHPMailer and Gmail SMTP
 class EmailService {
     private $mailer;
     private $emailEnabled;
@@ -34,25 +40,30 @@ class EmailService {
         $this->emailEnabled = EmailConfig::EMAIL_ENABLED;
         
         if ($this->emailEnabled) {
-            // Only initialize PHPMailer if email is enabled
-            if (file_exists('vendor/autoload.php')) {
-                require_once 'vendor/autoload.php';
-                
-                $this->mailer = new PHPMailer\PHPMailer\PHPMailer(true);
-                
-                // SMTP configuration
+            // Initialize PHPMailer
+            $this->mailer = new PHPMailer(true);
+            
+            try {
+                // Server settings
                 $this->mailer->isSMTP();
                 $this->mailer->Host = EmailConfig::SMTP_HOST;
                 $this->mailer->SMTPAuth = true;
                 $this->mailer->Username = EmailConfig::SMTP_USERNAME;
                 $this->mailer->Password = EmailConfig::SMTP_PASSWORD;
-                $this->mailer->SMTPSecure = EmailConfig::SMTP_ENCRYPTION;
+                $this->mailer->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
                 $this->mailer->Port = EmailConfig::SMTP_PORT;
                 
                 // Default settings
                 $this->mailer->setFrom(EmailConfig::FROM_EMAIL, EmailConfig::FROM_NAME);
                 $this->mailer->addReplyTo(EmailConfig::REPLY_TO, EmailConfig::FROM_NAME);
                 $this->mailer->isHTML(true);
+                $this->mailer->CharSet = 'UTF-8';
+                
+                // Enable verbose debug output (disable in production)
+                // $this->mailer->SMTPDebug = SMTP::DEBUG_SERVER;
+                
+            } catch (Exception $e) {
+                error_log("PHPMailer initialization failed: " . $e->getMessage());
             }
         }
     }
@@ -71,15 +82,25 @@ class EmailService {
         try {
             if (!$this->mailer) return false;
             
+            // Clear previous recipients
             $this->mailer->clearAddresses();
             $this->mailer->addAddress($email);
             
             $this->mailer->Subject = '🔐 Verify Your FxGold Account - Action Required';
             $this->mailer->Body = $this->getVerificationTemplate($otp, $userName);
             
-            return $this->mailer->send();
+            $result = $this->mailer->send();
+            
+            if ($result) {
+                error_log("Verification email sent successfully to: $email");
+            } else {
+                error_log("Failed to send verification email to: $email");
+            }
+            
+            return $result;
+            
         } catch (Exception $e) {
-            error_log("Email sending failed: " . $e->getMessage());
+            error_log("PHPMailer Error: " . $e->getMessage());
             return false;
         }
     }
@@ -94,15 +115,25 @@ class EmailService {
         try {
             if (!$this->mailer) return false;
             
+            // Clear previous recipients
             $this->mailer->clearAddresses();
             $this->mailer->addAddress($email);
             
             $this->mailer->Subject = '🔑 Reset Your FxGold Password - Secure Access Code';
             $this->mailer->Body = $this->getPasswordResetTemplate($otp, $userName);
             
-            return $this->mailer->send();
+            $result = $this->mailer->send();
+            
+            if ($result) {
+                error_log("Password reset email sent successfully to: $email");
+            } else {
+                error_log("Failed to send password reset email to: $email");
+            }
+            
+            return $result;
+            
         } catch (Exception $e) {
-            error_log("Email sending failed: " . $e->getMessage());
+            error_log("PHPMailer Error: " . $e->getMessage());
             return false;
         }
     }
@@ -117,15 +148,25 @@ class EmailService {
         try {
             if (!$this->mailer) return false;
             
+            // Clear previous recipients
             $this->mailer->clearAddresses();
             $this->mailer->addAddress($email);
             
             $this->mailer->Subject = '🔐 FxGold 2FA Verification Code - Secure Login';
             $this->mailer->Body = $this->get2FATemplate($otp, $userName);
             
-            return $this->mailer->send();
+            $result = $this->mailer->send();
+            
+            if ($result) {
+                error_log("2FA email sent successfully to: $email");
+            } else {
+                error_log("Failed to send 2FA email to: $email");
+            }
+            
+            return $result;
+            
         } catch (Exception $e) {
-            error_log("Email sending failed: " . $e->getMessage());
+            error_log("PHPMailer Error: " . $e->getMessage());
             return false;
         }
     }

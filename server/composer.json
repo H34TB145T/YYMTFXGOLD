@@ -1,6 +1,6 @@
 {
     "name": "fxgold/trading-platform",
-    "description": "FxGold Trading Platform Backend",
+    "description": "FxGold Trading Platform Backend with PHPMailer",
     "type": "project",
     "require": {
         "php": ">=7.4",
@@ -13,7 +13,7 @@
     },
     "scripts": {
         "post-install-cmd": [
-            "echo 'Please configure your email settings in emailConfig.php'"
+            "echo 'PHPMailer installed successfully! Configure your Gmail SMTP settings in emailConfig.php'"
         ]
     }
 }
