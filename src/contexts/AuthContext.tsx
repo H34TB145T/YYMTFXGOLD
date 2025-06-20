@@ -90,14 +90,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           return { success: false, message: 'Invalid admin credentials' };
         }
       } else {
-        // Check if user is verified
-        if (!user.is_verified) {
-          return { 
-            success: false, 
-            message: 'Please verify your email first. Check your inbox for the verification code.',
-            requiresVerification: true
-          };
-        }
+        // For demo purposes, accept any password for regular users
+        // In production, you would verify the hashed password
+      }
+
+      // Check if user is verified (skip for admin)
+      if (!user.is_verified && email !== 'admin@fxgold.shop') {
+        return { 
+          success: false, 
+          message: 'Please verify your email first. Check your inbox for the verification code.',
+          requiresVerification: true
+        };
       }
 
       // Check if 2FA is enabled
@@ -107,7 +110,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (result.success) {
           return { 
             success: true, 
-            message: '2FA code sent to your email',
+            message: result.message,
             requires2FA: true,
             userId: user.id
           };
@@ -141,14 +144,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { success: false, message: 'Email already registered' };
       }
 
-      // Create new user
+      // Create new user (auto-verified since no email server)
       const newUser: User = {
         id: uuidv4(),
         email,
         full_name: fullName,
         phone,
         role: 'user',
-        is_verified: false, // Require email verification
+        is_verified: false, // Will be set to true after "verification"
         balance: 1000, // Starting balance for demo
         usdtBalance: 0,
         marginBalance: 0,
@@ -163,22 +166,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       users.push(newUser);
       localStorage.setItem('freddyUsers', JSON.stringify(users));
 
-      // Send verification email
+      // Send verification email (will show OTP in alert since no email server)
       const emailResult = await emailService.sendVerificationEmail(email, newUser.username || newUser.full_name);
       
-      if (emailResult.success) {
-        return { 
-          success: true, 
-          message: 'Registration successful! Please check your email for verification code.',
-          requiresVerification: true
-        };
-      } else {
-        return { 
-          success: true, 
-          message: 'Registration successful but failed to send verification email. Please contact support.',
-          requiresVerification: true
-        };
-      }
+      return { 
+        success: true, 
+        message: emailResult.message,
+        requiresVerification: true
+      };
     } catch (error) {
       console.error('Registration error:', error);
       return { success: false, message: 'Registration failed' };

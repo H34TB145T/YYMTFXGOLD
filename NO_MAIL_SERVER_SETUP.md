@@ -5,13 +5,13 @@
 Since your server doesn't have a mail server, I've configured the platform with multiple options:
 
 ### **Option 1: Disable Email Features (Current Setup)**
-- ✅ **Email verification**: Disabled (users auto-verified)
+- ✅ **Email verification**: Shows OTP code in browser alert
 - ✅ **Password reset**: Uses default code `123456`
-- ✅ **2FA**: Works without email (accepts any 6-digit code)
-- ✅ **Registration**: Works immediately without email verification
+- ✅ **2FA**: Accepts any 6-digit code when email disabled
+- ✅ **Registration**: Works with simulated email verification
 
 ### **Option 2: Use Gmail SMTP (Recommended)**
-If you want email functionality, configure Gmail SMTP:
+If you want real email functionality, configure Gmail SMTP:
 
 1. **Create Gmail App Password:**
    - Go to Google Account settings
@@ -19,11 +19,18 @@ If you want email functionality, configure Gmail SMTP:
    - Generate App Password for "Mail"
 
 2. **Update Email Config:**
-   ```php
-   // In server/emailConfig.php
-   const EMAIL_ENABLED = true;
-   const SMTP_USERNAME = 'your-gmail@gmail.com';
-   const SMTP_PASSWORD = 'your-16-digit-app-password';
+   ```javascript
+   // In src/services/emailService.ts
+   this.emailEnabled = true; // Change to true
+   this.config = {
+     host: 'smtp.gmail.com',
+     port: 587,
+     secure: false,
+     auth: {
+       user: 'your-gmail@gmail.com',
+       pass: 'your-16-digit-app-password'
+     }
+   };
    ```
 
 ### **Option 3: Use Other SMTP Services**
@@ -33,17 +40,18 @@ If you want email functionality, configure Gmail SMTP:
 
 ## 🔧 **Current Configuration**
 
-### **Email Status: DISABLED**
-```php
-const EMAIL_ENABLED = false; // Set in emailConfig.php
+### **Email Status: SIMULATED**
+```javascript
+this.emailEnabled = false; // Set in emailService.ts
 ```
 
 ### **How It Works Without Email:**
 
 #### **Registration Process:**
 1. User registers with email/password
-2. ✅ **Auto-verified** (no email needed)
-3. Can login immediately
+2. 🚨 **OTP shown in browser alert** (since no email server)
+3. User enters OTP to verify account
+4. Can login after verification
 
 #### **Password Reset:**
 1. User requests password reset
@@ -90,8 +98,8 @@ public_html/
 
 #### **User Registration:**
 - **URL**: `https://fxgold.shop/register`
-- ✅ **No email verification needed**
-- ✅ **Immediate access after registration**
+- ✅ **OTP shown in browser alert**
+- ✅ **Enter OTP to verify account**
 
 ## 🛡️ **Security Notes**
 
@@ -115,13 +123,20 @@ public_html/
 To enable email functionality later:
 
 1. **Set up SMTP service** (Gmail, SendGrid, etc.)
-2. **Update emailConfig.php:**
-   ```php
-   const EMAIL_ENABLED = true;
-   const SMTP_USERNAME = 'your-email@domain.com';
-   const SMTP_PASSWORD = 'your-password';
+2. **Update emailService.ts:**
+   ```javascript
+   this.emailEnabled = true;
+   this.config = {
+     host: 'smtp.gmail.com',
+     port: 587,
+     secure: false,
+     auth: {
+       user: 'your-email@domain.com',
+       pass: 'your-password'
+     }
+   };
    ```
-3. **Restart your web server**
+3. **Rebuild and redeploy**
 
 ## 🚨 **Important Notes**
 
@@ -132,9 +147,9 @@ To enable email functionality later:
 - ⚠️ Consider enabling email for better security
 
 ### **User Experience:**
-- ✅ Faster registration (no email verification)
-- ✅ Immediate access to trading
-- ✅ Simplified password reset
+- ✅ Registration shows OTP in alert popup
+- ✅ Password reset uses default code `123456`
+- ✅ 2FA accepts any 6-digit code
 - ⚠️ Users should use strong passwords
 
 ### **Database Configuration:**
