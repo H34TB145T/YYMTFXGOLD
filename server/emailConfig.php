@@ -11,7 +11,7 @@ class EmailConfig {
     const SMTP_HOST = 'smtp.gmail.com';
     const SMTP_PORT = 587;
     const SMTP_USERNAME = 'fxgold.info@gmail.com'; // Your Gmail account
-    const SMTP_PASSWORD = 'svlw ypaq dqlv vzqz'; // Your Gmail App Password
+    const SMTP_PASSWORD = 'svlwypaqdqlvvzqz'; // Your Gmail App Password
     const SMTP_ENCRYPTION = 'tls';
     
     // Email settings - Updated with your domain
