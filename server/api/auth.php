@@ -8,11 +8,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
+// Add error logging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('log_errors', 1);
+
 require_once '../config/database.php';
 require_once '../emailConfig.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 $input = json_decode(file_get_contents('php://input'), true);
+
+// Log the incoming request for debugging
+error_log("API Request: " . json_encode($input));
 
 // Initialize services
 $emailService = new EmailService();
@@ -130,6 +138,9 @@ function handleRegister($input, $pdo, $emailService, $otpManager) {
     $username = $input['username'] ?? '';
     $fullName = $input['fullName'] ?? '';
     
+    // Log registration attempt
+    error_log("Registration attempt: email=$email, username=$username");
+    
     if (empty($email) || empty($password) || empty($username)) {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Missing required fields']);
@@ -150,42 +161,62 @@ function handleRegister($input, $pdo, $emailService, $otpManager) {
         return;
     }
     
-    // Check if user already exists
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ? OR username = ?");
-    $stmt->execute([$email, $username]);
-    if ($stmt->fetch()) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'User already exists with this email or username']);
-        return;
-    }
-    
-    // Create user
-    $userId = generateUUID();
-    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-    
-    $stmt = $pdo->prepare("INSERT INTO users (id, username, email, password, full_name, is_verified, balance, usdt_balance, margin_balance) VALUES (?, ?, ?, ?, ?, 0, 1000, 0, 0)");
-    
-    if ($stmt->execute([$userId, $username, $email, $hashedPassword, $fullName])) {
-        // Generate and send verification OTP using real PHPMailer
-        $otp = $emailService->generateOTP();
-        $otpManager->storeOTP($email, $otp, 'verification');
-        
-        if ($emailService->sendVerificationEmail($email, $username, $otp)) {
-            echo json_encode([
-                'success' => true, 
-                'message' => 'Registration successful! Please check your email for verification code.',
-                'userId' => $userId,
-                'requiresVerification' => true
-            ]);
-        } else {
-            echo json_encode([
-                'success' => true, 
-                'message' => 'Registration successful but failed to send verification email. Please contact support.',
-                'userId' => $userId,
-                'requiresVerification' => true
-            ]);
+    try {
+        // Check if user already exists
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ? OR username = ?");
+        $stmt->execute([$email, $username]);
+        if ($stmt->fetch()) {
+            error_log("User already exists: email=$email, username=$username");
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'User already exists with this email or username. Please try logging in or use different credentials.']);
+            return;
         }
-    } else {
+        
+        // Create user
+        $userId = generateUUID();
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+        
+        $stmt = $pdo->prepare("INSERT INTO users (id, username, email, password, full_name, is_verified, balance, usdt_balance, margin_balance) VALUES (?, ?, ?, ?, ?, 0, 1000, 0, 0)");
+        
+        if ($stmt->execute([$userId, $username, $email, $hashedPassword, $fullName])) {
+            error_log("User created successfully: $userId");
+            
+            // Generate and send verification OTP using real PHPMailer
+            $otp = $emailService->generateOTP();
+            $otpStored = $otpManager->storeOTP($email, $otp, 'verification');
+            
+            if ($otpStored) {
+                error_log("OTP stored: $otp for $email");
+                
+                if ($emailService->sendVerificationEmail($email, $username, $otp)) {
+                    error_log("Verification email sent successfully to $email");
+                    echo json_encode([
+                        'success' => true, 
+                        'message' => 'Registration successful! Please check your email for verification code.',
+                        'userId' => $userId,
+                        'requiresVerification' => true
+                    ]);
+                } else {
+                    error_log("Failed to send verification email to $email");
+                    echo json_encode([
+                        'success' => true, 
+                        'message' => 'Registration successful but failed to send verification email. Please contact support.',
+                        'userId' => $userId,
+                        'requiresVerification' => true
+                    ]);
+                }
+            } else {
+                error_log("Failed to store OTP for $email");
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Registration failed. Please try again.']);
+            }
+        } else {
+            error_log("Failed to insert user into database");
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Registration failed. Please try again.']);
+        }
+    } catch (Exception $e) {
+        error_log("Registration error: " . $e->getMessage());
         http_response_code(500);
         echo json_encode(['success' => false, 'message' => 'Registration failed. Please try again.']);
     }
