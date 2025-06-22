@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatCurrency } from '../../utils/helpers';
-import { Wallet, ArrowUpRight, ArrowDownRight, QrCode, AlertCircle } from 'lucide-react';
-import QRCode from 'react-qr-code';
+import { Wallet, ArrowUpRight, ArrowDownRight, AlertCircle } from 'lucide-react';
 
 const Transactions: React.FC = () => {
   const { user, updateUser } = useAuth();
   const [amount, setAmount] = useState('');
-  const [showQR, setShowQR] = useState(false);
   const [transactionType, setTransactionType] = useState<'deposit' | 'withdraw'>('deposit');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -48,14 +46,6 @@ const Transactions: React.FC = () => {
         setSuccess('');
       }, 3000);
     }
-  };
-
-  const mockWalletAddress = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
-  const mockBankDetails = {
-    bank: 'Crypto Bank',
-    accountName: "FxGold Trading",
-    accountNumber: '1234567890',
-    routingNumber: '021000021'
   };
 
   return (
@@ -148,35 +138,15 @@ const Transactions: React.FC = () => {
                 >
                   {transactionType === 'deposit' ? 'Deposit Funds' : 'Withdraw Funds'}
                 </button>
-
-                {transactionType === 'deposit' && (
-                  <button
-                    onClick={() => setShowQR(!showQR)}
-                    className="w-full py-2 px-4 bg-slate-700 hover:bg-slate-600 text-white rounded-md font-medium transition-colors flex items-center justify-center"
-                  >
-                    <QrCode className="h-4 w-4 mr-2" />
-                    {showQR ? 'Hide' : 'Show'} Payment Details
-                  </button>
-                )}
               </div>
 
-              {showQR && (
-                <div className="mt-6 p-4 bg-white rounded-lg">
-                  <div className="flex justify-center mb-4">
-                    <QRCode value={mockWalletAddress} size={150} />
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    <p className="font-medium text-gray-900">Wallet Address:</p>
-                    <p className="font-mono text-gray-600 break-all">{mockWalletAddress}</p>
-                    <div className="border-t border-gray-200 my-4"></div>
-                    <p className="font-medium text-gray-900">Bank Details:</p>
-                    <p className="text-gray-600">Bank: {mockBankDetails.bank}</p>
-                    <p className="text-gray-600">Account Name: {mockBankDetails.accountName}</p>
-                    <p className="text-gray-600">Account Number: {mockBankDetails.accountNumber}</p>
-                    <p className="text-gray-600">Routing Number: {mockBankDetails.routingNumber}</p>
-                  </div>
-                </div>
-              )}
+              {/* Professional Notice */}
+              <div className="mt-6 bg-slate-700 rounded-lg p-4">
+                <h3 className="text-white font-medium mb-2">Deposit & Withdrawal</h3>
+                <p className="text-gray-300 text-sm">
+                  For real deposits and withdrawals, please contact our support team or use the trading interface to buy/sell cryptocurrencies.
+                </p>
+              </div>
             </div>
           </div>
 
