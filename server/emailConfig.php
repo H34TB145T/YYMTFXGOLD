@@ -7,22 +7,17 @@ use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
 class EmailConfig {
-    // Gmail SMTP Configuration (Most Reliable)
+    // Gmail SMTP Configuration (Working Configuration)
     const SMTP_HOST = 'smtp.gmail.com';
-    const SMTP_PORT = 587;
-    const SMTP_USERNAME = 'fxgold.info@gmail.com'; // Your Gmail account
-    const SMTP_PASSWORD = 'svlwypaqdqlvvzqz'; // Your Gmail App Password (16 characters, no spaces)
-    const SMTP_ENCRYPTION = 'tls';
+    const SMTP_PORT = 465; // Using 465 for SMTPS (SSL)
+    const SMTP_USERNAME = 'fxgold.info@gmail.com';
+    const SMTP_PASSWORD = 'svlwypaqdqlvvzqz'; // Gmail App Password
+    const SMTP_ENCRYPTION = 'ssl'; // Using SSL instead of TLS
     
-    // Gmail Account Details (for reference)
-    const GMAIL_ACCOUNT = 'fxgold.info@gmail.com';
-    const GMAIL_PASSWORD = 'Fxgold123!@#'; // Your Gmail account password (NOT used for SMTP)
-    const GMAIL_APP_PASSWORD = 'svlwypaqdqlvvzqz'; // Your Gmail App Password (USED for SMTP)
-    
-    // Email settings - Professional branding with support email
-    const FROM_EMAIL = 'fxgold.info@gmail.com'; // Gmail sends
-    const FROM_NAME = 'FxGold Trading Support';
-    const REPLY_TO = 'support@fxgold.shop'; // Replies go to your cPanel email
+    // Email settings - Updated with your domain
+    const FROM_EMAIL = 'fxgold.info@gmail.com';
+    const FROM_NAME = 'FXGold Support';
+    const REPLY_TO = 'support@fxgold.shop';
     
     // Website URL - Updated to your domain
     const WEBSITE_URL = 'https://fxgold.shop';
@@ -36,7 +31,7 @@ class EmailConfig {
     const EMAIL_ENABLED = true; // Set to true to enable PHPMailer email verification
 }
 
-// Email service class with PHPMailer and Gmail SMTP
+// Email service class with PHPMailer and Gmail SMTP (Working Configuration)
 class EmailService {
     private $mailer;
     private $emailEnabled;
@@ -45,18 +40,18 @@ class EmailService {
         $this->emailEnabled = EmailConfig::EMAIL_ENABLED;
         
         if ($this->emailEnabled) {
-            // Initialize PHPMailer
+            // Initialize PHPMailer with working configuration
             $this->mailer = new PHPMailer(true);
             
             try {
-                // Server settings for Gmail SMTP
+                // Server settings - EXACT MATCH to your working test
                 $this->mailer->isSMTP();
                 $this->mailer->Host = EmailConfig::SMTP_HOST;
                 $this->mailer->SMTPAuth = true;
-                $this->mailer->Username = EmailConfig::SMTP_USERNAME; // Gmail account
-                $this->mailer->Password = EmailConfig::GMAIL_APP_PASSWORD; // Gmail App Password (16 chars)
-                $this->mailer->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-                $this->mailer->Port = EmailConfig::SMTP_PORT;
+                $this->mailer->Username = EmailConfig::SMTP_USERNAME;
+                $this->mailer->Password = EmailConfig::SMTP_PASSWORD;
+                $this->mailer->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS; // Using SMTPS (SSL)
+                $this->mailer->Port = EmailConfig::SMTP_PORT; // Port 465
                 
                 // Default settings
                 $this->mailer->setFrom(EmailConfig::FROM_EMAIL, EmailConfig::FROM_NAME);
@@ -64,8 +59,9 @@ class EmailService {
                 $this->mailer->isHTML(true);
                 $this->mailer->CharSet = 'UTF-8';
                 
-                // Enable verbose debug output (uncomment for debugging)
+                // Enable debug output for testing (comment out in production)
                 // $this->mailer->SMTPDebug = SMTP::DEBUG_SERVER;
+                // $this->mailer->Debugoutput = 'html';
                 
             } catch (Exception $e) {
                 error_log("PHPMailer initialization failed: " . $e->getMessage());
