@@ -1,4 +1,7 @@
 <?php
+// Clean output buffer and ensure JSON-only response
+ob_start();
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
@@ -8,13 +11,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-// Add error logging
+// Disable error display to prevent HTML in JSON response
+ini_set('display_errors', 0);
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
 ini_set('log_errors', 1);
 
-require_once '../config/database.php';
-require_once '../emailConfig.php';
+// Clean any previous output
+ob_clean();
+
+try {
+    require_once '../config/database.php';
+    require_once '../emailConfig.php';
+} catch (Exception $e) {
+    // Clean output and send JSON error
+    ob_clean();
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Server configuration error']);
+    exit;
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 $input = json_decode(file_get_contents('php://input'), true);
@@ -23,8 +37,15 @@ $input = json_decode(file_get_contents('php://input'), true);
 error_log("API Request: " . json_encode($input));
 
 // Initialize services
-$emailService = new EmailService();
-$otpManager = new OTPManager($pdo);
+try {
+    $emailService = new EmailService();
+    $otpManager = new OTPManager($pdo);
+} catch (Exception $e) {
+    ob_clean();
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Service initialization error']);
+    exit;
+}
 
 switch ($method) {
     case 'POST':
@@ -72,12 +93,14 @@ switch ($method) {
                 break;
                 
             default:
+                ob_clean();
                 http_response_code(400);
                 echo json_encode(['success' => false, 'message' => 'Invalid action']);
         }
         break;
         
     default:
+        ob_clean();
         http_response_code(405);
         echo json_encode(['success' => false, 'message' => 'Method not allowed']);
 }
@@ -87,6 +110,7 @@ function handleSendVerification($input, $emailService, $otpManager) {
     $userName = $input['userName'] ?? 'User';
     
     if (empty($email)) {
+        ob_clean();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Email is required']);
         return;
@@ -97,11 +121,13 @@ function handleSendVerification($input, $emailService, $otpManager) {
     $otpManager->storeOTP($email, $otp, 'verification');
     
     if ($emailService->sendVerificationEmail($email, $userName, $otp)) {
+        ob_clean();
         echo json_encode([
             'success' => true, 
             'message' => 'Verification email sent successfully! Please check your inbox.'
         ]);
     } else {
+        ob_clean();
         http_response_code(500);
         echo json_encode(['success' => false, 'message' => 'Failed to send verification email']);
     }
@@ -112,6 +138,7 @@ function handleSend2FA($input, $emailService, $otpManager) {
     $userName = $input['userName'] ?? 'User';
     
     if (empty($email)) {
+        ob_clean();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Email is required']);
         return;
@@ -122,11 +149,13 @@ function handleSend2FA($input, $emailService, $otpManager) {
     $otpManager->storeOTP($email, $otp, '2fa', EmailConfig::OTP_2FA_EXPIRY_MINUTES);
     
     if ($emailService->send2FAEmail($email, $userName, $otp)) {
+        ob_clean();
         echo json_encode([
             'success' => true, 
             'message' => '2FA code sent to your email'
         ]);
     } else {
+        ob_clean();
         http_response_code(500);
         echo json_encode(['success' => false, 'message' => 'Failed to send 2FA code']);
     }
@@ -142,6 +171,7 @@ function handleRegister($input, $pdo, $emailService, $otpManager) {
     error_log("Registration attempt: email=$email, username=$username");
     
     if (empty($email) || empty($password) || empty($username)) {
+        ob_clean();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Missing required fields']);
         return;
@@ -149,6 +179,7 @@ function handleRegister($input, $pdo, $emailService, $otpManager) {
     
     // Validate email format
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        ob_clean();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Invalid email format']);
         return;
@@ -156,6 +187,7 @@ function handleRegister($input, $pdo, $emailService, $otpManager) {
     
     // Validate password strength
     if (strlen($password) < 6) {
+        ob_clean();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Password must be at least 6 characters long']);
         return;
@@ -167,6 +199,7 @@ function handleRegister($input, $pdo, $emailService, $otpManager) {
         $stmt->execute([$email, $username]);
         if ($stmt->fetch()) {
             error_log("User already exists: email=$email, username=$username");
+            ob_clean();
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => 'User already exists with this email or username. Please try logging in or use different credentials.']);
             return;
@@ -190,6 +223,7 @@ function handleRegister($input, $pdo, $emailService, $otpManager) {
                 
                 if ($emailService->sendVerificationEmail($email, $username, $otp)) {
                     error_log("Verification email sent successfully to $email");
+                    ob_clean();
                     echo json_encode([
                         'success' => true, 
                         'message' => 'Registration successful! Please check your email for verification code.',
@@ -198,6 +232,7 @@ function handleRegister($input, $pdo, $emailService, $otpManager) {
                     ]);
                 } else {
                     error_log("Failed to send verification email to $email");
+                    ob_clean();
                     echo json_encode([
                         'success' => true, 
                         'message' => 'Registration successful but failed to send verification email. Please contact support.',
@@ -207,16 +242,19 @@ function handleRegister($input, $pdo, $emailService, $otpManager) {
                 }
             } else {
                 error_log("Failed to store OTP for $email");
+                ob_clean();
                 http_response_code(500);
                 echo json_encode(['success' => false, 'message' => 'Registration failed. Please try again.']);
             }
         } else {
             error_log("Failed to insert user into database");
+            ob_clean();
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Registration failed. Please try again.']);
         }
     } catch (Exception $e) {
         error_log("Registration error: " . $e->getMessage());
+        ob_clean();
         http_response_code(500);
         echo json_encode(['success' => false, 'message' => 'Registration failed. Please try again.']);
     }
@@ -227,6 +265,7 @@ function handleVerifyEmail($input, $pdo, $otpManager) {
     $otp = $input['otp'] ?? '';
     
     if (empty($email) || empty($otp)) {
+        ob_clean();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Missing email or OTP']);
         return;
@@ -234,6 +273,7 @@ function handleVerifyEmail($input, $pdo, $otpManager) {
     
     // Validate OTP format
     if (!preg_match('/^\d{6}$/', $otp)) {
+        ob_clean();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'OTP must be 6 digits']);
         return;
@@ -243,12 +283,15 @@ function handleVerifyEmail($input, $pdo, $otpManager) {
         // Update user as verified
         $stmt = $pdo->prepare("UPDATE users SET is_verified = 1 WHERE email = ?");
         if ($stmt->execute([$email])) {
+            ob_clean();
             echo json_encode(['success' => true, 'message' => 'Email verified successfully! You can now login.']);
         } else {
+            ob_clean();
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Failed to update verification status']);
         }
     } else {
+        ob_clean();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Invalid or expired OTP. Please request a new code.']);
     }
@@ -258,6 +301,7 @@ function handleResendVerification($input, $pdo, $emailService, $otpManager) {
     $email = $input['email'] ?? '';
     
     if (empty($email)) {
+        ob_clean();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Email is required']);
         return;
@@ -269,12 +313,14 @@ function handleResendVerification($input, $pdo, $emailService, $otpManager) {
     $user = $stmt->fetch();
     
     if (!$user) {
+        ob_clean();
         http_response_code(404);
         echo json_encode(['success' => false, 'message' => 'User not found']);
         return;
     }
     
     if ($user['is_verified']) {
+        ob_clean();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Email is already verified']);
         return;
@@ -285,8 +331,10 @@ function handleResendVerification($input, $pdo, $emailService, $otpManager) {
     $otpManager->storeOTP($email, $otp, 'verification');
     
     if ($emailService->sendVerificationEmail($email, $user['username'], $otp)) {
+        ob_clean();
         echo json_encode(['success' => true, 'message' => 'New verification code sent to your email']);
     } else {
+        ob_clean();
         http_response_code(500);
         echo json_encode(['success' => false, 'message' => 'Failed to send verification email']);
     }
@@ -297,6 +345,7 @@ function handleLogin($input, $pdo, $emailService, $otpManager) {
     $password = $input['password'] ?? '';
     
     if (empty($email) || empty($password)) {
+        ob_clean();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Missing email or password']);
         return;
@@ -309,6 +358,7 @@ function handleLogin($input, $pdo, $emailService, $otpManager) {
     if ($user && password_verify($password, $user['password'])) {
         // Check if email verification is required
         if (!$user['is_verified']) {
+            ob_clean();
             http_response_code(400);
             echo json_encode([
                 'success' => false, 
@@ -328,6 +378,7 @@ function handleLogin($input, $pdo, $emailService, $otpManager) {
             $otpManager->storeOTP($email, $otp, '2fa', EmailConfig::OTP_2FA_EXPIRY_MINUTES);
             
             if ($emailService->send2FAEmail($email, $user['username'], $otp)) {
+                ob_clean();
                 echo json_encode([
                     'success' => true,
                     'requires2FA' => true,
@@ -335,6 +386,7 @@ function handleLogin($input, $pdo, $emailService, $otpManager) {
                     'userId' => $user['id']
                 ]);
             } else {
+                ob_clean();
                 http_response_code(500);
                 echo json_encode(['success' => false, 'message' => 'Failed to send 2FA code']);
             }
@@ -342,6 +394,7 @@ function handleLogin($input, $pdo, $emailService, $otpManager) {
             // Generate JWT token (simplified for demo)
             $token = base64_encode(json_encode(['userId' => $user['id'], 'exp' => time() + 3600]));
             
+            ob_clean();
             echo json_encode([
                 'success' => true,
                 'message' => 'Login successful',
@@ -357,6 +410,7 @@ function handleLogin($input, $pdo, $emailService, $otpManager) {
             ]);
         }
     } else {
+        ob_clean();
         http_response_code(401);
         echo json_encode(['success' => false, 'message' => 'Invalid email or password']);
     }
@@ -366,6 +420,7 @@ function handleForgotPassword($input, $pdo, $emailService, $otpManager) {
     $email = $input['email'] ?? '';
     
     if (empty($email)) {
+        ob_clean();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Email is required']);
         return;
@@ -380,13 +435,16 @@ function handleForgotPassword($input, $pdo, $emailService, $otpManager) {
         $otpManager->storeOTP($email, $otp, 'password_reset');
         
         if ($emailService->sendPasswordResetEmail($email, $user['username'], $otp)) {
+            ob_clean();
             echo json_encode(['success' => true, 'message' => 'Password reset code sent to your email']);
         } else {
+            ob_clean();
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Failed to send reset email']);
         }
     } else {
         // Don't reveal if email exists or not for security
+        ob_clean();
         echo json_encode(['success' => true, 'message' => 'If the email exists, a reset code has been sent']);
     }
 }
@@ -397,6 +455,7 @@ function handleResetPassword($input, $pdo, $otpManager) {
     $newPassword = $input['newPassword'] ?? '';
     
     if (empty($email) || empty($otp) || empty($newPassword)) {
+        ob_clean();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Missing required fields']);
         return;
@@ -404,6 +463,7 @@ function handleResetPassword($input, $pdo, $otpManager) {
     
     // Validate password strength
     if (strlen($newPassword) < 6) {
+        ob_clean();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Password must be at least 6 characters long']);
         return;
@@ -414,12 +474,15 @@ function handleResetPassword($input, $pdo, $otpManager) {
         $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE email = ?");
         
         if ($stmt->execute([$hashedPassword, $email])) {
+            ob_clean();
             echo json_encode(['success' => true, 'message' => 'Password reset successfully']);
         } else {
+            ob_clean();
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Failed to update password']);
         }
     } else {
+        ob_clean();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Invalid or expired OTP']);
     }
@@ -431,6 +494,7 @@ function handleVerify2FA($input, $pdo, $otpManager) {
     $userId = $input['userId'] ?? '';
     
     if (empty($email) || empty($otp) || empty($userId)) {
+        ob_clean();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Missing required fields']);
         return;
@@ -445,6 +509,7 @@ function handleVerify2FA($input, $pdo, $otpManager) {
         $stmt->execute([$userId]);
         $user = $stmt->fetch();
         
+        ob_clean();
         echo json_encode([
             'success' => true,
             'message' => '2FA verification successful',
@@ -459,6 +524,7 @@ function handleVerify2FA($input, $pdo, $otpManager) {
             ]
         ]);
     } else {
+        ob_clean();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Invalid or expired 2FA code']);
     }
@@ -469,6 +535,7 @@ function handleToggle2FA($input, $pdo, $emailService, $otpManager) {
     $enable = $input['enable'] ?? false;
     
     if (empty($userId)) {
+        ob_clean();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'User ID is required']);
         return;
@@ -479,6 +546,7 @@ function handleToggle2FA($input, $pdo, $emailService, $otpManager) {
     $user = $stmt->fetch();
     
     if (!$user) {
+        ob_clean();
         http_response_code(404);
         echo json_encode(['success' => false, 'message' => 'User not found']);
         return;
@@ -490,12 +558,14 @@ function handleToggle2FA($input, $pdo, $emailService, $otpManager) {
         $otpManager->storeOTP($user['email'], $otp, '2fa_setup', EmailConfig::OTP_2FA_EXPIRY_MINUTES);
         
         if ($emailService->send2FAEmail($user['email'], $user['username'], $otp)) {
+            ob_clean();
             echo json_encode([
                 'success' => true,
                 'message' => '2FA setup code sent to your email',
                 'requiresVerification' => true
             ]);
         } else {
+            ob_clean();
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Failed to send 2FA setup code']);
         }
@@ -503,8 +573,10 @@ function handleToggle2FA($input, $pdo, $emailService, $otpManager) {
         // Disable 2FA
         $stmt = $pdo->prepare("UPDATE users SET two_factor_enabled = 0 WHERE id = ?");
         if ($stmt->execute([$userId])) {
+            ob_clean();
             echo json_encode(['success' => true, 'message' => '2FA disabled successfully']);
         } else {
+            ob_clean();
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Failed to disable 2FA']);
         }

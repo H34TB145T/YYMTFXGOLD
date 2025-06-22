@@ -66,11 +66,13 @@ const Register: React.FC = () => {
       return;
     }
     
+    console.log('🚀 Starting registration process...');
     const registerResult = await register(email, password, username, '');
     
     if (registerResult.success) {
       if (registerResult.requiresVerification) {
         setSuccess('Registration successful! Please check your email for verification code.');
+        console.log('✅ Registration successful, redirecting to verification...');
         setTimeout(() => {
           navigate(`/verify-email?email=${encodeURIComponent(email)}`);
         }, 2000);
@@ -81,6 +83,7 @@ const Register: React.FC = () => {
         }, 2000);
       }
     } else {
+      console.error('❌ Registration failed:', registerResult.message);
       setError(registerResult.message);
     }
     
