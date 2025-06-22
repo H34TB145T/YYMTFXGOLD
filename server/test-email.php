@@ -18,8 +18,8 @@ try {
     $mail->isSMTP();
     $mail->Host = 'smtp.gmail.com';
     $mail->SMTPAuth = true;
-    $mail->Username = 'fxgold.info@gmail.com';
-    $mail->Password = 'svlwypaqdqlvvzqz'; // App password without spaces
+    $mail->Username = 'fxgold.info@gmail.com'; // Your Gmail account
+    $mail->Password = 'svlwypaqdqlvvzqz'; // Your Gmail App Password (16 chars, no spaces)
     $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
     $mail->Port = 587;
     
@@ -32,12 +32,15 @@ try {
     $mail->Body = '
     <h2>✅ Gmail SMTP Test Successful!</h2>
     <p>This email was sent using Gmail SMTP configuration.</p>
-    <p><strong>Configuration:</strong></p>
+    <p><strong>Configuration Details:</strong></p>
     <ul>
-        <li>Host: smtp.gmail.com</li>
-        <li>Port: 587 (TLS)</li>
-        <li>From: fxgold.info@gmail.com</li>
-        <li>Reply-To: support@fxgold.shop</li>
+        <li><strong>Gmail Account:</strong> fxgold.info@gmail.com</li>
+        <li><strong>Gmail Password:</strong> FxGoldSupport123!@# (NOT used for SMTP)</li>
+        <li><strong>Gmail App Password:</strong> svlwypaqdqlvvzqz (USED for SMTP)</li>
+        <li><strong>Host:</strong> smtp.gmail.com</li>
+        <li><strong>Port:</strong> 587 (TLS)</li>
+        <li><strong>From:</strong> fxgold.info@gmail.com</li>
+        <li><strong>Reply-To:</strong> support@fxgold.shop</li>
     </ul>
     <p>Your email system is working correctly! 🎉</p>
     ';
@@ -58,60 +61,26 @@ try {
     echo "</div>";
 }
 
-// Test cPanel SMTP (Alternative)
-echo "<hr><h2>🔧 Testing cPanel SMTP (Alternative)</h2>";
-
-$mail2 = new PHPMailer(true);
-
-try {
-    $mail2->SMTPDebug = SMTP::DEBUG_SERVER;
-    $mail2->isSMTP();
-    $mail2->Host = 'ps04.zwhhosting.com';
-    $mail2->SMTPAuth = true;
-    $mail2->Username = 'support@fxgold.shop';
-    $mail2->Password = 'FxGoldSupport123!@#'; // Replace with actual password
-    $mail2->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-    $mail2->Port = 465;
-    
-    $mail2->setFrom('support@fxgold.shop', 'FxGold Trading Support');
-    $mail2->addAddress('yeminthanriki@gmail.com'); // Replace with your test email
-    
-    $mail2->isHTML(true);
-    $mail2->Subject = '🔧 FxGold Email Test - cPanel SMTP';
-    $mail2->Body = '
-    <h2>🔧 cPanel SMTP Test</h2>
-    <p>This email was sent using cPanel SMTP configuration.</p>
-    <p><strong>Configuration:</strong></p>
-    <ul>
-        <li>Host: ps04.zwhhosting.com</li>
-        <li>Port: 465 (SSL)</li>
-        <li>From: support@fxgold.shop</li>
-    </ul>
-    ';
-    
-    if ($mail2->send()) {
-        echo "<div style='background: #d4edda; color: #155724; padding: 15px; border-radius: 5px; margin: 10px 0;'>";
-        echo "<h3>✅ SUCCESS: cPanel SMTP Email Sent!</h3>";
-        echo "<p>✅ cPanel SMTP is working!</p>";
-        echo "</div>";
-    }
-    
-} catch (Exception $e) {
-    echo "<div style='background: #fff3cd; color: #856404; padding: 15px; border-radius: 5px; margin: 10px 0;'>";
-    echo "<h3>⚠️ cPanel SMTP Failed</h3>";
-    echo "<p>Error: {$mail2->ErrorInfo}</p>";
-    echo "<p><strong>This is normal if your hosting doesn't support SMTP.</strong></p>";
-    echo "</div>";
-}
-
 echo "<hr>";
 echo "<div style='background: #e2e3e5; color: #383d41; padding: 15px; border-radius: 5px; margin: 10px 0;'>";
-echo "<h3>📋 Recommendations:</h3>";
+echo "<h3>📋 Gmail Configuration Summary:</h3>";
 echo "<ul>";
-echo "<li><strong>✅ Use Gmail SMTP</strong> - Most reliable and always works</li>";
-echo "<li><strong>📧 From Address:</strong> fxgold.info@gmail.com (professional delivery)</li>";
+echo "<li><strong>📧 Gmail Account:</strong> fxgold.info@gmail.com</li>";
+echo "<li><strong>🔑 Gmail Password:</strong> FxGoldSupport123!@# (for logging into Gmail)</li>";
+echo "<li><strong>🔐 Gmail App Password:</strong> svlwypaqdqlvvzqz (for SMTP authentication)</li>";
+echo "<li><strong>📤 From Address:</strong> fxgold.info@gmail.com (professional delivery)</li>";
 echo "<li><strong>📧 Reply-To:</strong> support@fxgold.shop (users can reply to your cPanel email)</li>";
-echo "<li><strong>🔐 App Password:</strong> svlwypaqdqlvvzqz (no spaces)</li>";
+echo "<li><strong>🌐 Host:</strong> smtp.gmail.com</li>";
+echo "<li><strong>🔌 Port:</strong> 587 (TLS)</li>";
+echo "</ul>";
+echo "</div>";
+
+echo "<div style='background: #d1ecf1; color: #0c5460; padding: 15px; border-radius: 5px; margin: 10px 0;'>";
+echo "<h3>🔍 Important Distinction:</h3>";
+echo "<ul>";
+echo "<li><strong>Gmail Account Password (FxGoldSupport123!@#):</strong> Used to log into Gmail website/app</li>";
+echo "<li><strong>Gmail App Password (svlwypaqdqlvvzqz):</strong> Used for SMTP authentication in applications</li>";
+echo "<li><strong>SMTP uses the App Password, NOT the account password!</strong></li>";
 echo "</ul>";
 echo "</div>";
 ?>

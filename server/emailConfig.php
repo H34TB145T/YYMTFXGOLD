@@ -11,8 +11,13 @@ class EmailConfig {
     const SMTP_HOST = 'smtp.gmail.com';
     const SMTP_PORT = 587;
     const SMTP_USERNAME = 'fxgold.info@gmail.com'; // Your Gmail account
-    const SMTP_PASSWORD = 'svlwypaqdqlvvzqz'; // Your Gmail App Password (no spaces)
+    const SMTP_PASSWORD = 'svlwypaqdqlvvzqz'; // Your Gmail App Password (16 characters, no spaces)
     const SMTP_ENCRYPTION = 'tls';
+    
+    // Gmail Account Details (for reference)
+    const GMAIL_ACCOUNT = 'fxgold.info@gmail.com';
+    const GMAIL_PASSWORD = 'FxGoldSupport123!@#'; // Your Gmail account password (NOT used for SMTP)
+    const GMAIL_APP_PASSWORD = 'svlwypaqdqlvvzqz'; // Your Gmail App Password (USED for SMTP)
     
     // Email settings - Professional branding with support email
     const FROM_EMAIL = 'fxgold.info@gmail.com'; // Gmail sends
@@ -48,8 +53,8 @@ class EmailService {
                 $this->mailer->isSMTP();
                 $this->mailer->Host = EmailConfig::SMTP_HOST;
                 $this->mailer->SMTPAuth = true;
-                $this->mailer->Username = EmailConfig::SMTP_USERNAME;
-                $this->mailer->Password = EmailConfig::SMTP_PASSWORD;
+                $this->mailer->Username = EmailConfig::SMTP_USERNAME; // Gmail account
+                $this->mailer->Password = EmailConfig::GMAIL_APP_PASSWORD; // Gmail App Password (16 chars)
                 $this->mailer->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
                 $this->mailer->Port = EmailConfig::SMTP_PORT;
                 
