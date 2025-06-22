@@ -26,7 +26,7 @@ try {
     $mail->Port = 465;
     
     $mail->setFrom('support@fxgold.shop', 'FxGold Trading Support');
-    $mail->addAddress('test@example.com'); // Replace with your test email
+    $mail->addAddress('yeminthanriki@gmail.com'); // Replace with your test email
     $mail->isHTML(true);
     $mail->Subject = 'Test Email from FxGold';
     $mail->Body = 'This is a test email to verify SMTP configuration.';
