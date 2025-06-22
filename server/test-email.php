@@ -5,74 +5,113 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
-// Test cPanel SMTP settings
+echo "<h1>🧪 Email Configuration Test</h1>";
+
+// Test Gmail SMTP (Recommended)
+echo "<h2>✅ Testing Gmail SMTP (Recommended)</h2>";
+
 $mail = new PHPMailer(true);
 
 try {
-    // Enable verbose debug output
+    // Gmail SMTP Configuration
     $mail->SMTPDebug = SMTP::DEBUG_SERVER;
     $mail->isSMTP();
-    
-    // Try different configurations
-    echo "<h2>Testing cPanel SMTP Configuration</h2>";
-    
-    // Configuration 1: SSL on port 465
-    echo "<h3>Test 1: SSL on port 465</h3>";
-    $mail->Host = 'ps04.zwhhosting.com';
+    $mail->Host = 'smtp.gmail.com';
     $mail->SMTPAuth = true;
-    $mail->Username = 'support@fxgold.shop';
-    $mail->Password = 'FxGoldSupport123!@#'; // Replace with actual password
-    $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-    $mail->Port = 465;
+    $mail->Username = 'fxgold.info@gmail.com';
+    $mail->Password = 'svlwypaqdqlvvzqz'; // App password without spaces
+    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    $mail->Port = 587;
     
-    $mail->setFrom('support@fxgold.shop', 'FxGold Trading Support');
+    $mail->setFrom('fxgold.info@gmail.com', 'FxGold Trading Support');
     $mail->addAddress('yeminthanriki@gmail.com'); // Replace with your test email
+    $mail->addReplyTo('support@fxgold.shop', 'FxGold Support');
+    
     $mail->isHTML(true);
-    $mail->Subject = 'Test Email from FxGold';
-    $mail->Body = 'This is a test email to verify SMTP configuration.';
+    $mail->Subject = '🔐 FxGold Email Test - Gmail SMTP';
+    $mail->Body = '
+    <h2>✅ Gmail SMTP Test Successful!</h2>
+    <p>This email was sent using Gmail SMTP configuration.</p>
+    <p><strong>Configuration:</strong></p>
+    <ul>
+        <li>Host: smtp.gmail.com</li>
+        <li>Port: 587 (TLS)</li>
+        <li>From: fxgold.info@gmail.com</li>
+        <li>Reply-To: support@fxgold.shop</li>
+    </ul>
+    <p>Your email system is working correctly! 🎉</p>
+    ';
     
     if ($mail->send()) {
-        echo "<p style='color: green;'>✅ Email sent successfully with SSL on port 465!</p>";
+        echo "<div style='background: #d4edda; color: #155724; padding: 15px; border-radius: 5px; margin: 10px 0;'>";
+        echo "<h3>✅ SUCCESS: Gmail SMTP Email Sent!</h3>";
+        echo "<p>✅ Email sent successfully using Gmail SMTP!</p>";
+        echo "<p>✅ Check your inbox: yeminthanriki@gmail.com</p>";
+        echo "<p>✅ Your email system is working perfectly!</p>";
+        echo "</div>";
     }
     
 } catch (Exception $e) {
-    echo "<p style='color: red;'>❌ SSL 465 failed: {$mail->ErrorInfo}</p>";
-    
-    // Try Configuration 2: TLS on port 587
-    try {
-        echo "<h3>Test 2: TLS on port 587</h3>";
-        $mail->clearAddresses();
-        $mail->Port = 587;
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        
-        $mail->addAddress('test@example.com'); // Replace with your test email
-        
-        if ($mail->send()) {
-            echo "<p style='color: green;'>✅ Email sent successfully with TLS on port 587!</p>";
-        }
-        
-    } catch (Exception $e2) {
-        echo "<p style='color: red;'>❌ TLS 587 failed: {$mail->ErrorInfo}</p>";
-        
-        // Try Configuration 3: No encryption on port 25
-        try {
-            echo "<h3>Test 3: No encryption on port 25</h3>";
-            $mail->clearAddresses();
-            $mail->Port = 25;
-            $mail->SMTPSecure = false;
-            $mail->SMTPAuth = false; // Some servers don't require auth on port 25
-            
-            $mail->addAddress('test@example.com'); // Replace with your test email
-            
-            if ($mail->send()) {
-                echo "<p style='color: green;'>✅ Email sent successfully on port 25!</p>";
-            }
-            
-        } catch (Exception $e3) {
-            echo "<p style='color: red;'>❌ Port 25 failed: {$mail->ErrorInfo}</p>";
-            echo "<h3>❌ All cPanel SMTP tests failed!</h3>";
-            echo "<p><strong>Recommendation:</strong> Use Gmail SMTP instead.</p>";
-        }
-    }
+    echo "<div style='background: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; margin: 10px 0;'>";
+    echo "<h3>❌ Gmail SMTP Failed</h3>";
+    echo "<p>Error: {$mail->ErrorInfo}</p>";
+    echo "</div>";
 }
+
+// Test cPanel SMTP (Alternative)
+echo "<hr><h2>🔧 Testing cPanel SMTP (Alternative)</h2>";
+
+$mail2 = new PHPMailer(true);
+
+try {
+    $mail2->SMTPDebug = SMTP::DEBUG_SERVER;
+    $mail2->isSMTP();
+    $mail2->Host = 'ps04.zwhhosting.com';
+    $mail2->SMTPAuth = true;
+    $mail2->Username = 'support@fxgold.shop';
+    $mail2->Password = 'FxGoldSupport123!@#'; // Replace with actual password
+    $mail2->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+    $mail2->Port = 465;
+    
+    $mail2->setFrom('support@fxgold.shop', 'FxGold Trading Support');
+    $mail2->addAddress('yeminthanriki@gmail.com'); // Replace with your test email
+    
+    $mail2->isHTML(true);
+    $mail2->Subject = '🔧 FxGold Email Test - cPanel SMTP';
+    $mail2->Body = '
+    <h2>🔧 cPanel SMTP Test</h2>
+    <p>This email was sent using cPanel SMTP configuration.</p>
+    <p><strong>Configuration:</strong></p>
+    <ul>
+        <li>Host: ps04.zwhhosting.com</li>
+        <li>Port: 465 (SSL)</li>
+        <li>From: support@fxgold.shop</li>
+    </ul>
+    ';
+    
+    if ($mail2->send()) {
+        echo "<div style='background: #d4edda; color: #155724; padding: 15px; border-radius: 5px; margin: 10px 0;'>";
+        echo "<h3>✅ SUCCESS: cPanel SMTP Email Sent!</h3>";
+        echo "<p>✅ cPanel SMTP is working!</p>";
+        echo "</div>";
+    }
+    
+} catch (Exception $e) {
+    echo "<div style='background: #fff3cd; color: #856404; padding: 15px; border-radius: 5px; margin: 10px 0;'>";
+    echo "<h3>⚠️ cPanel SMTP Failed</h3>";
+    echo "<p>Error: {$mail2->ErrorInfo}</p>";
+    echo "<p><strong>This is normal if your hosting doesn't support SMTP.</strong></p>";
+    echo "</div>";
+}
+
+echo "<hr>";
+echo "<div style='background: #e2e3e5; color: #383d41; padding: 15px; border-radius: 5px; margin: 10px 0;'>";
+echo "<h3>📋 Recommendations:</h3>";
+echo "<ul>";
+echo "<li><strong>✅ Use Gmail SMTP</strong> - Most reliable and always works</li>";
+echo "<li><strong>📧 From Address:</strong> fxgold.info@gmail.com (professional delivery)</li>";
+echo "<li><strong>📧 Reply-To:</strong> support@fxgold.shop (users can reply to your cPanel email)</li>";
+echo "<li><strong>🔐 App Password:</strong> svlwypaqdqlvvzqz (no spaces)</li>";
+echo "</ul>";
+echo "</div>";
 ?>
