@@ -5,6 +5,7 @@ import { calculatePortfolioValue, formatCurrency, formatCryptoAmount, formatDate
 import AssetCard from '../common/AssetCard';
 import LoadingSpinner from '../common/LoadingSpinner';
 import TwoFactorSettings from './TwoFactorSettings';
+import AccountSettings from './AccountSettings';
 import { User, Clock, Wallet, DollarSign, ArrowUpRight, ArrowDownRight, Shield, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -307,52 +308,7 @@ const Profile: React.FC = () => {
           {activeTab === 'settings' && (
             <div>
               <h2 className="text-xl font-bold text-white mb-6">Account Settings</h2>
-              
-              <div className="bg-slate-800 rounded-lg p-6">
-                <div className="mb-6">
-                  <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2">
-                    Username
-                  </label>
-                  <input
-                    id="username"
-                    type="text"
-                    defaultValue={user?.username || user?.full_name}
-                    disabled
-                    className="block w-full bg-slate-700 border-gray-600 rounded-md py-2 px-3 text-white"
-                  />
-                  <p className="mt-1 text-sm text-gray-400">
-                    Username cannot be changed in the demo version
-                  </p>
-                </div>
-                <div className="mb-6">
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                    Email Address
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    defaultValue={user?.email}
-                    disabled
-                    className="block w-full bg-slate-700 border-gray-600 rounded-md py-2 px-3 text-white"
-                  />
-                  <p className="mt-1 text-sm text-gray-400">
-                    Email cannot be changed in the demo version
-                  </p>
-                </div>
-                
-                <div className="mt-8 pt-6 border-t border-slate-700">
-                  <h3 className="text-lg font-medium text-white mb-4">Demo Account</h3>
-                  <p className="text-gray-400 mb-4">
-                    This is a demo account for demonstration purposes only. No real money is involved.
-                  </p>
-                  <button
-                    className="bg-red-600 hover:bg-red-700 text-white rounded-md px-4 py-2 text-sm font-medium transition-colors"
-                    disabled
-                  >
-                    Reset Account (Disabled in Demo)
-                  </button>
-                </div>
-              </div>
+              <AccountSettings />
             </div>
           )}
         </div>

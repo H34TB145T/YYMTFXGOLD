@@ -92,6 +92,14 @@ switch ($method) {
                 handleToggle2FA($input, $pdo, $emailService, $otpManager);
                 break;
                 
+            case 'update_username':
+                handleUpdateUsername($input, $pdo);
+                break;
+                
+            case 'change_password':
+                handleChangePassword($input, $pdo);
+                break;
+                
             default:
                 ob_clean();
                 http_response_code(400);
@@ -686,6 +694,115 @@ function handleToggle2FA($input, $pdo, $emailService, $otpManager) {
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Failed to disable 2FA']);
         }
+    }
+}
+
+function handleUpdateUsername($input, $pdo) {
+    $userId = $input['userId'] ?? '';
+    $newUsername = $input['newUsername'] ?? '';
+    
+    if (empty($userId) || empty($newUsername)) {
+        ob_clean();
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'User ID and new username are required']);
+        return;
+    }
+    
+    // Validate username
+    if (strlen($newUsername) < 3) {
+        ob_clean();
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Username must be at least 3 characters long']);
+        return;
+    }
+    
+    try {
+        // Check if username already exists
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ? AND id != ?");
+        $stmt->execute([$newUsername, $userId]);
+        if ($stmt->fetch()) {
+            ob_clean();
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Username already taken']);
+            return;
+        }
+        
+        // Update username
+        $stmt = $pdo->prepare("UPDATE users SET username = ? WHERE id = ?");
+        if ($stmt->execute([$newUsername, $userId])) {
+            ob_clean();
+            echo json_encode(['success' => true, 'message' => 'Username updated successfully']);
+        } else {
+            ob_clean();
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Failed to update username']);
+        }
+    } catch (Exception $e) {
+        error_log("Update username error: " . $e->getMessage());
+        ob_clean();
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Failed to update username']);
+    }
+}
+
+function handleChangePassword($input, $pdo) {
+    $userId = $input['userId'] ?? '';
+    $currentPassword = $input['currentPassword'] ?? '';
+    $newPassword = $input['newPassword'] ?? '';
+    
+    if (empty($userId) || empty($currentPassword) || empty($newPassword)) {
+        ob_clean();
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'All fields are required']);
+        return;
+    }
+    
+    // Validate new password
+    if (strlen($newPassword) < 6) {
+        ob_clean();
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'New password must be at least 6 characters long']);
+        return;
+    }
+    
+    try {
+        // Get current user data
+        $stmt = $pdo->prepare("SELECT password FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch();
+        
+        if (!$user) {
+            ob_clean();
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'User not found']);
+            return;
+        }
+        
+        // Verify current password
+        if (!password_verify($currentPassword, $user['password'])) {
+            ob_clean();
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Current password is incorrect']);
+            return;
+        }
+        
+        // Update password
+        $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+        $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
+        
+        if ($stmt->execute([$hashedPassword, $userId])) {
+            ob_clean();
+            echo json_encode(['success' => true, 'message' => 'Password changed successfully']);
+        } else {
+            ob_clean();
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Failed to change password']);
+        }
+    } catch (Exception $e) {
+        error_log("Change password error: " . $e->getMessage());
+        ob_clean();
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Failed to change password']);
     }
 }
 

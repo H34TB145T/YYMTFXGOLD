@@ -234,5 +234,56 @@ export const authService = {
         message: 'Failed to update 2FA settings. Please try again.'
       };
     }
+  },
+
+  async updateUsername(userId: string, newUsername: string): Promise<AuthResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth.php`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'update_username',
+          userId,
+          newUsername
+        })
+      });
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('❌ Update username error:', error);
+      return {
+        success: false,
+        message: 'Failed to update username. Please try again.'
+      };
+    }
+  },
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<AuthResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth.php`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'change_password',
+          userId,
+          currentPassword,
+          newPassword
+        })
+      });
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('❌ Change password error:', error);
+      return {
+        success: false,
+        message: 'Failed to change password. Please try again.'
+      };
+    }
   }
 };
