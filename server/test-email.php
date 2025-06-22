@@ -21,7 +21,7 @@ try {
     $mail->Host = 'ps04.zwhhosting.com';
     $mail->SMTPAuth = true;
     $mail->Username = 'support@fxgold.shop';
-    $mail->Password = 'YOUR_EMAIL_PASSWORD'; // Replace with actual password
+    $mail->Password = 'FxGoldSupport123!@#'; // Replace with actual password
     $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
     $mail->Port = 465;
     
