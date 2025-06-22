@@ -59,7 +59,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         phone: '',
         role: 'admin',
         is_verified: true,
-        balance: 0,
+        balance: 0, // No default balance for admin
         usdtBalance: 0,
         marginBalance: 0,
         assets: [],
@@ -88,7 +88,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           assets: result.user.assets || [],
           transactions: result.user.transactions || [],
           positions: result.user.positions || [],
-          balance: result.user.balance || 0,
+          balance: result.user.balance || 0, // No default balance
           usdtBalance: result.user.usdtBalance || 0,
           marginBalance: result.user.marginBalance || 0,
           username: result.user.username || result.user.full_name?.toLowerCase().replace(/\s+/g, ''),
@@ -134,7 +134,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           phone,
           role: 'user',
           is_verified: false,
-          balance: 1000,
+          balance: 0, // NO default balance for new users
           usdtBalance: 0,
           marginBalance: 0,
           assets: [],
@@ -167,7 +167,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       assets: updatedUser.assets || [],
       transactions: updatedUser.transactions || [],
       positions: updatedUser.positions || [],
-      balance: updatedUser.balance || 0,
+      balance: updatedUser.balance || 0, // No default balance
       usdtBalance: updatedUser.usdtBalance || 0,
       marginBalance: updatedUser.marginBalance || 0,
       username: updatedUser.username || updatedUser.full_name?.toLowerCase().replace(/\s+/g, ''),
@@ -191,7 +191,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Ensure user has all required properties with defaults
         return {
           ...user,
-          balance: user.balance ?? 1000,
+          balance: user.balance ?? 0, // No default balance
           usdtBalance: user.usdtBalance ?? 0,
           marginBalance: user.marginBalance ?? 0,
           assets: user.assets ?? [],

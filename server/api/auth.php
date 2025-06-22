@@ -313,14 +313,14 @@ function handleRegister($input, $pdo, $emailService, $otpManager) {
             return;
         }
         
-        // Create user
+        // Create user with NO default balance - users start with $0
         $userId = generateUUID();
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
         
-        $stmt = $pdo->prepare("INSERT INTO users (id, username, email, password, full_name, is_verified, balance, usdt_balance, margin_balance) VALUES (?, ?, ?, ?, ?, 0, 1000, 0, 0)");
+        $stmt = $pdo->prepare("INSERT INTO users (id, username, email, password, full_name, is_verified, balance, usdt_balance, margin_balance) VALUES (?, ?, ?, ?, ?, 0, 0, 0, 0)");
         
         if ($stmt->execute([$userId, $username, $email, $hashedPassword, $fullName])) {
-            error_log("User created successfully: $userId");
+            error_log("User created successfully: $userId with $0 balance");
             
             // Generate and send verification OTP using real PHPMailer
             $otp = $emailService->generateOTP();
