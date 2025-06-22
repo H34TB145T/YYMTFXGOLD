@@ -7,17 +7,17 @@ use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
 class EmailConfig {
-    // cPanel Mail Server Configuration (Your Own Server)
-    const SMTP_HOST = 'ps04.zwhhosting.com';
-    const SMTP_PORT = 465;
-    const SMTP_USERNAME = 'support@fxgold.shop'; // Your cPanel email
-    const SMTP_PASSWORD = 'YOUR_EMAIL_PASSWORD'; // Replace with your actual email password
-    const SMTP_ENCRYPTION = 'ssl'; // SSL for port 465
+    // Gmail SMTP Configuration (Most Reliable)
+    const SMTP_HOST = 'smtp.gmail.com';
+    const SMTP_PORT = 587;
+    const SMTP_USERNAME = 'fxgold.info@gmail.com'; // Your Gmail account
+    const SMTP_PASSWORD = 'svlw ypaq dqlv vzqz'; // Your Gmail App Password
+    const SMTP_ENCRYPTION = 'tls';
     
-    // Email settings - All using support@fxgold.shop
-    const FROM_EMAIL = 'support@fxgold.shop';
+    // Email settings - Professional branding with support email
+    const FROM_EMAIL = 'fxgold.info@gmail.com'; // Gmail sends
     const FROM_NAME = 'FxGold Trading Support';
-    const REPLY_TO = 'support@fxgold.shop'; // Changed to support email
+    const REPLY_TO = 'support@fxgold.shop'; // Replies go to your cPanel email
     
     // Website URL - Updated to your domain
     const WEBSITE_URL = 'https://fxgold.shop';
@@ -31,7 +31,7 @@ class EmailConfig {
     const EMAIL_ENABLED = true; // Set to true to enable PHPMailer email verification
 }
 
-// Email service class with PHPMailer and cPanel SMTP
+// Email service class with PHPMailer and Gmail SMTP
 class EmailService {
     private $mailer;
     private $emailEnabled;
@@ -44,13 +44,13 @@ class EmailService {
             $this->mailer = new PHPMailer(true);
             
             try {
-                // Server settings for cPanel mail
+                // Server settings for Gmail SMTP
                 $this->mailer->isSMTP();
                 $this->mailer->Host = EmailConfig::SMTP_HOST;
                 $this->mailer->SMTPAuth = true;
                 $this->mailer->Username = EmailConfig::SMTP_USERNAME;
                 $this->mailer->Password = EmailConfig::SMTP_PASSWORD;
-                $this->mailer->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS; // SSL encryption
+                $this->mailer->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
                 $this->mailer->Port = EmailConfig::SMTP_PORT;
                 
                 // Default settings
@@ -59,7 +59,7 @@ class EmailService {
                 $this->mailer->isHTML(true);
                 $this->mailer->CharSet = 'UTF-8';
                 
-                // Enable verbose debug output (disable in production)
+                // Enable verbose debug output (uncomment for debugging)
                 // $this->mailer->SMTPDebug = SMTP::DEBUG_SERVER;
                 
             } catch (Exception $e) {
