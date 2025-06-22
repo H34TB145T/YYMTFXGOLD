@@ -26,7 +26,7 @@ try {
     // Clean output and send JSON error
     ob_clean();
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Server configuration error']);
+    echo json_encode(['success' => false, 'message' => 'Server configuration error: ' . $e->getMessage()]);
     exit;
 }
 
@@ -43,7 +43,7 @@ try {
 } catch (Exception $e) {
     ob_clean();
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Service initialization error']);
+    echo json_encode(['success' => false, 'message' => 'Service initialization error: ' . $e->getMessage()]);
     exit;
 }
 
@@ -451,70 +451,77 @@ function handleLogin($input, $pdo, $emailService, $otpManager) {
         return;
     }
     
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
-    $stmt->execute([$email]);
-    $user = $stmt->fetch();
-    
-    if ($user && password_verify($password, $user['password'])) {
-        // Check if email verification is required
-        if (!$user['is_verified']) {
-            ob_clean();
-            http_response_code(400);
-            echo json_encode([
-                'success' => false, 
-                'message' => 'Please verify your email first',
-                'requiresVerification' => true
-            ]);
-            return;
-        }
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
+        $stmt->execute([$email]);
+        $user = $stmt->fetch();
         
-        // Update last login
-        $stmt = $pdo->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
-        $stmt->execute([$user['id']]);
-        
-        // Check if 2FA is enabled
-        if ($user['two_factor_enabled']) {
-            $otp = $emailService->generateOTP();
-            $otpManager->storeOTP($email, $otp, '2fa', EmailConfig::OTP_2FA_EXPIRY_MINUTES);
-            
-            if ($emailService->send2FAEmail($email, $user['username'], $otp)) {
+        if ($user && password_verify($password, $user['password'])) {
+            // Check if email verification is required
+            if (!$user['is_verified']) {
                 ob_clean();
+                http_response_code(400);
                 echo json_encode([
-                    'success' => true,
-                    'requires2FA' => true,
-                    'message' => '2FA code sent to your email',
-                    'userId' => $user['id']
+                    'success' => false, 
+                    'message' => 'Please verify your email first',
+                    'requiresVerification' => true
                 ]);
+                return;
+            }
+            
+            // Update last login
+            $stmt = $pdo->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
+            $stmt->execute([$user['id']]);
+            
+            // Check if 2FA is enabled
+            if ($user['two_factor_enabled']) {
+                $otp = $emailService->generateOTP();
+                $otpManager->storeOTP($email, $otp, '2fa', EmailConfig::OTP_2FA_EXPIRY_MINUTES);
+                
+                if ($emailService->send2FAEmail($email, $user['username'], $otp)) {
+                    ob_clean();
+                    echo json_encode([
+                        'success' => true,
+                        'requires2FA' => true,
+                        'message' => '2FA code sent to your email',
+                        'userId' => $user['id']
+                    ]);
+                } else {
+                    ob_clean();
+                    http_response_code(500);
+                    echo json_encode(['success' => false, 'message' => 'Failed to send 2FA code']);
+                }
             } else {
-                ob_clean();
-                http_response_code(500);
-                echo json_encode(['success' => false, 'message' => 'Failed to send 2FA code']);
+                // Generate JWT token (simplified for demo)
+                $token = base64_encode(json_encode(['userId' => $user['id'], 'exp' => time() + 3600]));
+                
+                // Get complete user data with assets, transactions, and positions
+                $completeUserData = getUserCompleteData($pdo, $user['id']);
+                
+                if ($completeUserData) {
+                    ob_clean();
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Login successful',
+                        'token' => $token,
+                        'user' => $completeUserData
+                    ]);
+                } else {
+                    ob_clean();
+                    http_response_code(500);
+                    echo json_encode(['success' => false, 'message' => 'Failed to load user data']);
+                }
             }
         } else {
-            // Generate JWT token (simplified for demo)
-            $token = base64_encode(json_encode(['userId' => $user['id'], 'exp' => time() + 3600]));
-            
-            // Get complete user data with assets, transactions, and positions
-            $completeUserData = getUserCompleteData($pdo, $user['id']);
-            
-            if ($completeUserData) {
-                ob_clean();
-                echo json_encode([
-                    'success' => true,
-                    'message' => 'Login successful',
-                    'token' => $token,
-                    'user' => $completeUserData
-                ]);
-            } else {
-                ob_clean();
-                http_response_code(500);
-                echo json_encode(['success' => false, 'message' => 'Failed to load user data']);
-            }
+            ob_clean();
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'Invalid email or password']);
         }
-    } else {
+    } catch (Exception $e) {
+        error_log("Login error: " . $e->getMessage());
         ob_clean();
-        http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Invalid email or password']);
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Login failed: ' . $e->getMessage()]);
     }
 }
 

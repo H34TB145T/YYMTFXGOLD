@@ -48,7 +48,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const initializeAdminUser = () => {
-    const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
+    const users = JSON.parse(localStorage.getItem('fxgoldUsers') || '[]');
     const adminExists = users.some((u: User) => u.email === 'admin@fxgold.shop');
     
     if (!adminExists) {
@@ -70,7 +70,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
       
       users.push(adminUser);
-      localStorage.setItem('freddyUsers', JSON.stringify(users));
+      localStorage.setItem('fxgoldUsers', JSON.stringify(users));
     }
   };
 
@@ -98,7 +98,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(completeUser);
         
         // Also update localStorage for compatibility
-        const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
+        const users = JSON.parse(localStorage.getItem('fxgoldUsers') || '[]');
         const updatedUsers = users.map((u: User) => 
           u.email === email ? { ...u, ...completeUser } : u
         );
@@ -108,7 +108,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           updatedUsers.push(completeUser);
         }
         
-        localStorage.setItem('freddyUsers', JSON.stringify(updatedUsers));
+        localStorage.setItem('fxgoldUsers', JSON.stringify(updatedUsers));
       }
       
       return result;
@@ -125,7 +125,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (result.success) {
         // Also save to localStorage for compatibility
-        const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
+        const users = JSON.parse(localStorage.getItem('fxgoldUsers') || '[]');
         
         const newUser: User = {
           id: result.userId || uuidv4(),
@@ -145,7 +145,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         };
         
         users.push(newUser);
-        localStorage.setItem('freddyUsers', JSON.stringify(users));
+        localStorage.setItem('fxgoldUsers', JSON.stringify(users));
       }
       
       return result;
@@ -176,15 +176,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     setUser(completeUpdatedUser);
     
-    const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
+    const users = JSON.parse(localStorage.getItem('fxgoldUsers') || '[]');
     const updatedUsers = users.map((u: User) => u.id === completeUpdatedUser.id ? completeUpdatedUser : u);
-    localStorage.setItem('freddyUsers', JSON.stringify(updatedUsers));
+    localStorage.setItem('fxgoldUsers', JSON.stringify(updatedUsers));
   };
 
   const getCurrentUser = (token: string): User | null => {
     try {
       const userId = token.replace('demo-token-', '');
-      const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
+      const users = JSON.parse(localStorage.getItem('fxgoldUsers') || '[]');
       const user = users.find((u: User) => u.id === userId);
       
       if (user) {
