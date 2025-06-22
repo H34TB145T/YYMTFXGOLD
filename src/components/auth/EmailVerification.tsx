@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { emailService } from '../../services/emailService';
+import { authService } from '../../services/authService';
 import { Mail, AlertCircle, CheckCircle, RefreshCw, Clock, Shield, Send } from 'lucide-react';
 
 const EmailVerification: React.FC = () => {
@@ -56,7 +56,8 @@ const EmailVerification: React.FC = () => {
     }
 
     try {
-      const result = emailService.verifyOTP(email, otp, 'verification');
+      console.log('🔍 Verifying OTP with backend API...');
+      const result = await authService.verifyEmail(email, otp);
       
       if (result.success) {
         // Update user verification status in localStorage
@@ -74,6 +75,7 @@ const EmailVerification: React.FC = () => {
         setError(result.message);
       }
     } catch (error) {
+      console.error('❌ Verification error:', error);
       setError('Verification failed. Please try again.');
     }
     
@@ -86,12 +88,8 @@ const EmailVerification: React.FC = () => {
     setSuccess('');
     
     try {
-      // Get user info for personalized email
-      const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
-      const user = users.find((u: any) => u.email === email);
-      const userName = user?.username || user?.full_name || 'User';
-
-      const result = await emailService.sendVerificationEmail(email, userName);
+      console.log('📧 Resending verification email via backend API...');
+      const result = await authService.resendVerification(email);
       
       if (result.success) {
         setSuccess('New verification code sent to your email! Please check your inbox.');
@@ -102,6 +100,7 @@ const EmailVerification: React.FC = () => {
         setError(result.message);
       }
     } catch (error) {
+      console.error('❌ Resend error:', error);
       setError('Failed to resend verification code. Please try again.');
     }
     

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types';
-import { emailService } from '../services/emailService';
+import { authService } from '../services/authService';
 import { v4 as uuidv4 } from 'uuid';
 
 interface AuthContextType {
@@ -76,58 +76,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      // Get users from localStorage
-      const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
-      const user = users.find((u: User) => u.email === email);
+      // Use backend API for login
+      const result = await authService.login(email, password);
       
-      if (!user) {
-        return { success: false, message: 'Invalid email or password' };
+      if (result.success && result.token && result.user) {
+        localStorage.setItem('token', result.token);
+        setUser(result.user);
+        
+        // Also update localStorage for compatibility
+        const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
+        const updatedUsers = users.map((u: User) => 
+          u.email === email ? { ...u, ...result.user } : u
+        );
+        localStorage.setItem('freddyUsers', JSON.stringify(updatedUsers));
       }
-
-      // Check admin credentials
-      if (email === 'admin@fxgold.shop') {
-        if (password !== 'FxgoldAdmin123!@#') {
-          return { success: false, message: 'Invalid admin credentials' };
-        }
-      } else {
-        // For demo purposes, accept any password for regular users
-        // In production, you would verify the hashed password
-      }
-
-      // Check if user is verified (skip for admin)
-      if (!user.is_verified && email !== 'admin@fxgold.shop') {
-        return { 
-          success: false, 
-          message: 'Please verify your email first. Check your inbox for the verification code.',
-          requiresVerification: true
-        };
-      }
-
-      // Check if 2FA is enabled
-      if (user.twoFactorEnabled) {
-        // Send 2FA code
-        const result = await emailService.send2FAEmail(email, user.username || user.full_name);
-        if (result.success) {
-          return { 
-            success: true, 
-            message: result.message,
-            requires2FA: true,
-            userId: user.id
-          };
-        } else {
-          return { success: false, message: 'Failed to send 2FA code' };
-        }
-      }
-
-      // Regular login without 2FA
-      const token = `demo-token-${user.id}`;
-      localStorage.setItem('token', token);
-      setUser(user);
       
-      return { 
-        success: true, 
-        message: 'Login successful'
-      };
+      return result;
     } catch (error) {
       console.error('Login error:', error);
       return { success: false, message: 'Login failed' };
@@ -136,44 +100,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (email: string, password: string, fullName: string, phone: string) => {
     try {
-      // Get existing users
-      const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
+      // 🚀 USE BACKEND API INSTEAD OF LOCALSTORAGE
+      const result = await authService.register(email, password, fullName, fullName);
       
-      // Check if user already exists
-      if (users.some((u: User) => u.email === email)) {
-        return { success: false, message: 'Email already registered' };
+      if (result.success) {
+        // Also save to localStorage for compatibility
+        const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
+        
+        const newUser: User = {
+          id: result.userId || uuidv4(),
+          email,
+          full_name: fullName,
+          phone,
+          role: 'user',
+          is_verified: false,
+          balance: 1000,
+          usdtBalance: 0,
+          marginBalance: 0,
+          assets: [],
+          transactions: [],
+          positions: [],
+          username: fullName.toLowerCase().replace(/\s+/g, ''),
+          twoFactorEnabled: false
+        };
+        
+        users.push(newUser);
+        localStorage.setItem('freddyUsers', JSON.stringify(users));
       }
-
-      // Create new user (auto-verified since no email server)
-      const newUser: User = {
-        id: uuidv4(),
-        email,
-        full_name: fullName,
-        phone,
-        role: 'user',
-        is_verified: false, // Will be set to true after "verification"
-        balance: 1000, // Starting balance for demo
-        usdtBalance: 0,
-        marginBalance: 0,
-        assets: [],
-        transactions: [],
-        positions: [],
-        username: fullName.toLowerCase().replace(/\s+/g, ''),
-        twoFactorEnabled: false
-      };
       
-      // Save user to localStorage
-      users.push(newUser);
-      localStorage.setItem('freddyUsers', JSON.stringify(users));
-
-      // Send verification email (will show OTP in alert since no email server)
-      const emailResult = await emailService.sendVerificationEmail(email, newUser.username || newUser.full_name);
-      
-      return { 
-        success: true, 
-        message: emailResult.message,
-        requiresVerification: true
-      };
+      return result;
     } catch (error) {
       console.error('Registration error:', error);
       return { success: false, message: 'Registration failed' };
@@ -199,7 +154,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const user = users.find((u: User) => u.id === userId);
       
       if (user) {
-        // Ensure all required properties exist with default values
         return {
           ...user,
           balance: user.balance ?? 1000,

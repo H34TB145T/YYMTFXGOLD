@@ -1,4 +1,3 @@
-import { apiRequest } from '../config/api';
 import { User } from '../types';
 
 interface AuthResponse {
@@ -12,11 +11,18 @@ interface AuthResponse {
   autoVerified?: boolean;
 }
 
+const API_BASE_URL = 'https://fxgold.shop/api';
+
 export const authService = {
   async register(email: string, password: string, username: string, fullName: string): Promise<AuthResponse> {
     try {
-      return await apiRequest('/auth.php', {
+      console.log('🚀 Calling backend registration API...');
+      
+      const response = await fetch(`${API_BASE_URL}/auth.php`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           action: 'register',
           email,
@@ -25,27 +31,46 @@ export const authService = {
           fullName
         })
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('📧 Backend registration response:', result);
+      
+      return result;
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('❌ Registration API error:', error);
       return {
         success: false,
-        message: 'Registration failed. Please try again.'
+        message: 'Registration failed. Please check your internet connection and try again.'
       };
     }
   },
 
   async verifyEmail(email: string, otp: string): Promise<AuthResponse> {
     try {
-      return await apiRequest('/auth.php', {
+      console.log('🔍 Verifying email with backend...');
+      
+      const response = await fetch(`${API_BASE_URL}/auth.php`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           action: 'verify_email',
           email,
           otp
         })
       });
+
+      const result = await response.json();
+      console.log('✅ Email verification response:', result);
+      
+      return result;
     } catch (error) {
-      console.error('Email verification error:', error);
+      console.error('❌ Email verification error:', error);
       return {
         success: false,
         message: 'Email verification failed. Please try again.'
@@ -55,15 +80,25 @@ export const authService = {
 
   async resendVerification(email: string): Promise<AuthResponse> {
     try {
-      return await apiRequest('/auth.php', {
+      console.log('📧 Resending verification email...');
+      
+      const response = await fetch(`${API_BASE_URL}/auth.php`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           action: 'resend_verification',
           email
         })
       });
+
+      const result = await response.json();
+      console.log('📨 Resend verification response:', result);
+      
+      return result;
     } catch (error) {
-      console.error('Resend verification error:', error);
+      console.error('❌ Resend verification error:', error);
       return {
         success: false,
         message: 'Failed to resend verification code. Please try again.'
@@ -73,16 +108,26 @@ export const authService = {
 
   async login(email: string, password: string): Promise<AuthResponse> {
     try {
-      return await apiRequest('/auth.php', {
+      console.log('🔐 Calling backend login API...');
+      
+      const response = await fetch(`${API_BASE_URL}/auth.php`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           action: 'login',
           email,
           password
         })
       });
+
+      const result = await response.json();
+      console.log('🔑 Backend login response:', result);
+      
+      return result;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Login API error:', error);
       return {
         success: false,
         message: 'Login failed. Please try again.'
@@ -92,15 +137,21 @@ export const authService = {
 
   async forgotPassword(email: string): Promise<AuthResponse> {
     try {
-      return await apiRequest('/auth.php', {
+      const response = await fetch(`${API_BASE_URL}/auth.php`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           action: 'forgot_password',
           email
         })
       });
+
+      const result = await response.json();
+      return result;
     } catch (error) {
-      console.error('Forgot password error:', error);
+      console.error('❌ Forgot password error:', error);
       return {
         success: false,
         message: 'Failed to send reset code. Please try again.'
@@ -110,8 +161,11 @@ export const authService = {
 
   async resetPassword(email: string, otp: string, newPassword: string): Promise<AuthResponse> {
     try {
-      return await apiRequest('/auth.php', {
+      const response = await fetch(`${API_BASE_URL}/auth.php`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           action: 'reset_password',
           email,
@@ -119,8 +173,11 @@ export const authService = {
           newPassword
         })
       });
+
+      const result = await response.json();
+      return result;
     } catch (error) {
-      console.error('Reset password error:', error);
+      console.error('❌ Reset password error:', error);
       return {
         success: false,
         message: 'Password reset failed. Please try again.'
@@ -130,8 +187,11 @@ export const authService = {
 
   async verify2FA(email: string, otp: string, userId: string): Promise<AuthResponse> {
     try {
-      return await apiRequest('/auth.php', {
+      const response = await fetch(`${API_BASE_URL}/auth.php`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           action: 'verify_2fa',
           email,
@@ -139,8 +199,11 @@ export const authService = {
           userId
         })
       });
+
+      const result = await response.json();
+      return result;
     } catch (error) {
-      console.error('2FA verification error:', error);
+      console.error('❌ 2FA verification error:', error);
       return {
         success: false,
         message: '2FA verification failed. Please try again.'
@@ -150,16 +213,22 @@ export const authService = {
 
   async toggle2FA(userId: string, enable: boolean): Promise<AuthResponse> {
     try {
-      return await apiRequest('/auth.php', {
+      const response = await fetch(`${API_BASE_URL}/auth.php`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           action: 'toggle_2fa',
           userId,
           enable
         })
       });
+
+      const result = await response.json();
+      return result;
     } catch (error) {
-      console.error('2FA toggle error:', error);
+      console.error('❌ 2FA toggle error:', error);
       return {
         success: false,
         message: 'Failed to update 2FA settings. Please try again.'
