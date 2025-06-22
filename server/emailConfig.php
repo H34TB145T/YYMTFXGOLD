@@ -7,16 +7,16 @@ use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
 class EmailConfig {
-    // Gmail SMTP Configuration
-    const SMTP_HOST = 'smtp.gmail.com';
-    const SMTP_PORT = 587;
-    const SMTP_USERNAME = 'fxgold.info@gmail.com'; // Your Gmail account
-    const SMTP_PASSWORD = 'svlwypaqdqlvvzqz'; // Your Gmail App Password
-    const SMTP_ENCRYPTION = 'tls';
+    // cPanel Mail Server Configuration (Your Own Server)
+    const SMTP_HOST = 'ps04.zwhhosting.com';
+    const SMTP_PORT = 465;
+    const SMTP_USERNAME = 'support@fxgold.shop'; // Your cPanel email
+    const SMTP_PASSWORD = 'YOUR_EMAIL_PASSWORD'; // Replace with your actual email password
+    const SMTP_ENCRYPTION = 'ssl'; // SSL for port 465
     
     // Email settings - Updated with your domain
-    const FROM_EMAIL = 'fxgold.info@gmail.com';
-    const FROM_NAME = 'FxGold Trading';
+    const FROM_EMAIL = 'support@fxgold.shop';
+    const FROM_NAME = 'FxGold Trading Support';
     const REPLY_TO = 'admin@fxgold.shop';
     
     // Website URL - Updated to your domain
@@ -31,7 +31,7 @@ class EmailConfig {
     const EMAIL_ENABLED = true; // Set to true to enable PHPMailer email verification
 }
 
-// Email service class with PHPMailer and Gmail SMTP
+// Email service class with PHPMailer and cPanel SMTP
 class EmailService {
     private $mailer;
     private $emailEnabled;
@@ -44,13 +44,13 @@ class EmailService {
             $this->mailer = new PHPMailer(true);
             
             try {
-                // Server settings
+                // Server settings for cPanel mail
                 $this->mailer->isSMTP();
                 $this->mailer->Host = EmailConfig::SMTP_HOST;
                 $this->mailer->SMTPAuth = true;
                 $this->mailer->Username = EmailConfig::SMTP_USERNAME;
                 $this->mailer->Password = EmailConfig::SMTP_PASSWORD;
-                $this->mailer->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                $this->mailer->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS; // SSL encryption
                 $this->mailer->Port = EmailConfig::SMTP_PORT;
                 
                 // Default settings
@@ -293,7 +293,7 @@ class EmailService {
                     <p><strong>FxGold Trading Platform</strong></p>
                     <p>&copy; 2024 FxGold Trading. All rights reserved.</p>
                     <p style='margin-top: 15px; font-size: 12px;'>This is an automated message, please do not reply to this email.</p>
-                    <p style='font-size: 12px;'>Need help? Contact us at admin@fxgold.shop</p>
+                    <p style='font-size: 12px;'>Need help? Contact us at support@fxgold.shop</p>
                     <p style='font-size: 12px; margin-top: 10px;'>🌐 Website: <a href='" . EmailConfig::WEBSITE_URL . "' style='color: #10b981;'>fxgold.shop</a></p>
                 </div>
             </div>
@@ -416,7 +416,7 @@ class EmailService {
                     <p><strong>FxGold Trading Platform</strong></p>
                     <p>&copy; 2024 FxGold Trading. All rights reserved.</p>
                     <p style='margin-top: 15px; font-size: 12px;'>This is an automated message, please do not reply to this email.</p>
-                    <p style='font-size: 12px;'>Need help? Contact us at admin@fxgold.shop</p>
+                    <p style='font-size: 12px;'>Need help? Contact us at support@fxgold.shop</p>
                     <p style='font-size: 12px; margin-top: 10px;'>🌐 Website: <a href='" . EmailConfig::WEBSITE_URL . "' style='color: #ef4444;'>fxgold.shop</a></p>
                 </div>
             </div>
@@ -543,7 +543,7 @@ class EmailService {
                     <p><strong>FxGold Trading Platform</strong></p>
                     <p>&copy; 2024 FxGold Trading. All rights reserved.</p>
                     <p style='margin-top: 15px; font-size: 12px;'>This is an automated message, please do not reply to this email.</p>
-                    <p style='font-size: 12px;'>Need help? Contact us at admin@fxgold.shop</p>
+                    <p style='font-size: 12px;'>Need help? Contact us at support@fxgold.shop</p>
                     <p style='font-size: 12px; margin-top: 10px;'>🌐 Website: <a href='" . EmailConfig::WEBSITE_URL . "' style='color: #3b82f6;'>fxgold.shop</a></p>
                 </div>
             </div>
