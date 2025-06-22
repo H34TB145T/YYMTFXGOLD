@@ -553,7 +553,7 @@ class EmailService {
     }
 }
 
-// OTP management class
+// OTP management class - FIXED VERSION
 class OTPManager {
     private $db;
     
@@ -562,36 +562,81 @@ class OTPManager {
     }
     
     public function storeOTP($email, $otp, $type, $expiryMinutes = EmailConfig::OTP_EXPIRY_MINUTES) {
-        $expiryTime = date('Y-m-d H:i:s', strtotime("+{$expiryMinutes} minutes"));
-        $id = $this->generateUUID();
-        
-        // Delete any existing OTP for this email and type
-        $stmt = $this->db->prepare("DELETE FROM otp_codes WHERE email = ? AND type = ?");
-        $stmt->execute([$email, $type]);
-        
-        // Insert new OTP
-        $stmt = $this->db->prepare("INSERT INTO otp_codes (id, email, otp, type, expires_at) VALUES (?, ?, ?, ?, ?)");
-        return $stmt->execute([$id, $email, $otp, $type, $expiryTime]);
+        try {
+            $expiryTime = date('Y-m-d H:i:s', strtotime("+{$expiryMinutes} minutes"));
+            $id = $this->generateUUID();
+            
+            // Delete any existing OTP for this email and type
+            $stmt = $this->db->prepare("DELETE FROM otp_codes WHERE email = ? AND type = ?");
+            $stmt->execute([$email, $type]);
+            
+            // Insert new OTP
+            $stmt = $this->db->prepare("INSERT INTO otp_codes (id, email, otp, type, expires_at) VALUES (?, ?, ?, ?, ?)");
+            $result = $stmt->execute([$id, $email, $otp, $type, $expiryTime]);
+            
+            if ($result) {
+                error_log("OTP stored successfully: email=$email, otp=$otp, type=$type, expires=$expiryTime");
+            } else {
+                error_log("Failed to store OTP: email=$email, type=$type");
+            }
+            
+            return $result;
+        } catch (Exception $e) {
+            error_log("OTP storage error: " . $e->getMessage());
+            return false;
+        }
     }
     
     public function verifyOTP($email, $otp, $type) {
-        $stmt = $this->db->prepare("SELECT * FROM otp_codes WHERE email = ? AND otp = ? AND type = ? AND expires_at > NOW()");
-        $stmt->execute([$email, $otp, $type]);
-        $result = $stmt->fetch();
-        
-        if ($result) {
-            // Delete the OTP after successful verification
-            $stmt = $this->db->prepare("DELETE FROM otp_codes WHERE id = ?");
-            $stmt->execute([$result['id']]);
-            return true;
+        try {
+            error_log("Verifying OTP: email=$email, otp=$otp, type=$type");
+            
+            // Get current time for comparison
+            $currentTime = date('Y-m-d H:i:s');
+            
+            $stmt = $this->db->prepare("SELECT * FROM otp_codes WHERE email = ? AND otp = ? AND type = ? AND expires_at > ?");
+            $stmt->execute([$email, $otp, $type, $currentTime]);
+            $result = $stmt->fetch();
+            
+            if ($result) {
+                error_log("OTP verification successful: email=$email, otp=$otp");
+                
+                // Delete the OTP after successful verification
+                $stmt = $this->db->prepare("DELETE FROM otp_codes WHERE id = ?");
+                $stmt->execute([$result['id']]);
+                
+                return true;
+            } else {
+                error_log("OTP verification failed: email=$email, otp=$otp, type=$type");
+                
+                // Check if OTP exists but is expired
+                $stmt = $this->db->prepare("SELECT * FROM otp_codes WHERE email = ? AND otp = ? AND type = ?");
+                $stmt->execute([$email, $otp, $type]);
+                $expiredResult = $stmt->fetch();
+                
+                if ($expiredResult) {
+                    error_log("OTP found but expired: email=$email, expires_at=" . $expiredResult['expires_at']);
+                } else {
+                    error_log("OTP not found in database: email=$email, otp=$otp, type=$type");
+                }
+                
+                return false;
+            }
+        } catch (Exception $e) {
+            error_log("OTP verification error: " . $e->getMessage());
+            return false;
         }
-        
-        return false;
     }
     
     public function cleanExpiredOTPs() {
-        $stmt = $this->db->prepare("DELETE FROM otp_codes WHERE expires_at <= NOW()");
-        return $stmt->execute();
+        try {
+            $currentTime = date('Y-m-d H:i:s');
+            $stmt = $this->db->prepare("DELETE FROM otp_codes WHERE expires_at <= ?");
+            return $stmt->execute([$currentTime]);
+        } catch (Exception $e) {
+            error_log("OTP cleanup error: " . $e->getMessage());
+            return false;
+        }
     }
     
     private function generateUUID() {
