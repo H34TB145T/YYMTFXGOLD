@@ -27,6 +27,10 @@ switch ($method) {
                 handleRegister($input, $pdo, $emailService, $otpManager);
                 break;
                 
+            case 'send_verification':
+                handleSendVerification($input, $emailService, $otpManager);
+                break;
+                
             case 'verify_email':
                 handleVerifyEmail($input, $pdo, $otpManager);
                 break;
@@ -51,6 +55,10 @@ switch ($method) {
                 handleVerify2FA($input, $pdo, $otpManager);
                 break;
                 
+            case 'send_2fa':
+                handleSend2FA($input, $emailService, $otpManager);
+                break;
+                
             case 'toggle_2fa':
                 handleToggle2FA($input, $pdo, $emailService, $otpManager);
                 break;
@@ -64,6 +72,56 @@ switch ($method) {
     default:
         http_response_code(405);
         echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+}
+
+function handleSendVerification($input, $emailService, $otpManager) {
+    $email = $input['email'] ?? '';
+    $userName = $input['userName'] ?? 'User';
+    
+    if (empty($email)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Email is required']);
+        return;
+    }
+    
+    // Generate and send verification OTP
+    $otp = $emailService->generateOTP();
+    $otpManager->storeOTP($email, $otp, 'verification');
+    
+    if ($emailService->sendVerificationEmail($email, $userName, $otp)) {
+        echo json_encode([
+            'success' => true, 
+            'message' => 'Verification email sent successfully! Please check your inbox.'
+        ]);
+    } else {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Failed to send verification email']);
+    }
+}
+
+function handleSend2FA($input, $emailService, $otpManager) {
+    $email = $input['email'] ?? '';
+    $userName = $input['userName'] ?? 'User';
+    
+    if (empty($email)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Email is required']);
+        return;
+    }
+    
+    // Generate and send 2FA OTP
+    $otp = $emailService->generateOTP();
+    $otpManager->storeOTP($email, $otp, '2fa', EmailConfig::OTP_2FA_EXPIRY_MINUTES);
+    
+    if ($emailService->send2FAEmail($email, $userName, $otp)) {
+        echo json_encode([
+            'success' => true, 
+            'message' => '2FA code sent to your email'
+        ]);
+    } else {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Failed to send 2FA code']);
+    }
 }
 
 function handleRegister($input, $pdo, $emailService, $otpManager) {
@@ -105,39 +163,26 @@ function handleRegister($input, $pdo, $emailService, $otpManager) {
     $userId = generateUUID();
     $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
     
-    // If email is disabled, auto-verify the user
-    $isVerified = !EmailConfig::EMAIL_ENABLED;
+    $stmt = $pdo->prepare("INSERT INTO users (id, username, email, password, full_name, is_verified, balance, usdt_balance, margin_balance) VALUES (?, ?, ?, ?, ?, 0, 1000, 0, 0)");
     
-    $stmt = $pdo->prepare("INSERT INTO users (id, username, email, password, full_name, is_verified, balance, usdt_balance, margin_balance) VALUES (?, ?, ?, ?, ?, ?, 1000, 0, 0)");
-    
-    if ($stmt->execute([$userId, $username, $email, $hashedPassword, $fullName, $isVerified])) {
-        if (EmailConfig::EMAIL_ENABLED) {
-            // Generate and send verification OTP
-            $otp = $emailService->generateOTP();
-            $otpManager->storeOTP($email, $otp, 'verification');
-            
-            if ($emailService->sendVerificationEmail($email, $username, $otp)) {
-                echo json_encode([
-                    'success' => true, 
-                    'message' => 'Registration successful! Please check your email for verification code.',
-                    'userId' => $userId,
-                    'requiresVerification' => true
-                ]);
-            } else {
-                echo json_encode([
-                    'success' => true, 
-                    'message' => 'Registration successful but failed to send verification email. Please contact support.',
-                    'userId' => $userId,
-                    'requiresVerification' => true
-                ]);
-            }
-        } else {
-            // Email disabled - auto-verify and allow immediate login
+    if ($stmt->execute([$userId, $username, $email, $hashedPassword, $fullName])) {
+        // Generate and send verification OTP using real PHPMailer
+        $otp = $emailService->generateOTP();
+        $otpManager->storeOTP($email, $otp, 'verification');
+        
+        if ($emailService->sendVerificationEmail($email, $username, $otp)) {
             echo json_encode([
                 'success' => true, 
-                'message' => 'Registration successful. You can now login.',
+                'message' => 'Registration successful! Please check your email for verification code.',
                 'userId' => $userId,
-                'autoVerified' => true
+                'requiresVerification' => true
+            ]);
+        } else {
+            echo json_encode([
+                'success' => true, 
+                'message' => 'Registration successful but failed to send verification email. Please contact support.',
+                'userId' => $userId,
+                'requiresVerification' => true
             ]);
         }
     } else {
@@ -160,23 +205,6 @@ function handleVerifyEmail($input, $pdo, $otpManager) {
     if (!preg_match('/^\d{6}$/', $otp)) {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'OTP must be 6 digits']);
-        return;
-    }
-    
-    // If email is disabled, accept any 6-digit code
-    if (!EmailConfig::EMAIL_ENABLED) {
-        if (strlen($otp) === 6 && is_numeric($otp)) {
-            $stmt = $pdo->prepare("UPDATE users SET is_verified = 1 WHERE email = ?");
-            if ($stmt->execute([$email])) {
-                echo json_encode(['success' => true, 'message' => 'Email verified successfully']);
-            } else {
-                http_response_code(500);
-                echo json_encode(['success' => false, 'message' => 'Failed to update verification status']);
-            }
-        } else {
-            http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Please enter a valid 6-digit code']);
-        }
         return;
     }
     
@@ -221,19 +249,15 @@ function handleResendVerification($input, $pdo, $emailService, $otpManager) {
         return;
     }
     
-    if (EmailConfig::EMAIL_ENABLED) {
-        // Generate and send new verification OTP
-        $otp = $emailService->generateOTP();
-        $otpManager->storeOTP($email, $otp, 'verification');
-        
-        if ($emailService->sendVerificationEmail($email, $user['username'], $otp)) {
-            echo json_encode(['success' => true, 'message' => 'New verification code sent to your email']);
-        } else {
-            http_response_code(500);
-            echo json_encode(['success' => false, 'message' => 'Failed to send verification email']);
-        }
+    // Generate and send new verification OTP
+    $otp = $emailService->generateOTP();
+    $otpManager->storeOTP($email, $otp, 'verification');
+    
+    if ($emailService->sendVerificationEmail($email, $user['username'], $otp)) {
+        echo json_encode(['success' => true, 'message' => 'New verification code sent to your email']);
     } else {
-        echo json_encode(['success' => true, 'message' => 'Email verification is disabled. You can login directly.']);
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Failed to send verification email']);
     }
 }
 
@@ -253,7 +277,7 @@ function handleLogin($input, $pdo, $emailService, $otpManager) {
     
     if ($user && password_verify($password, $user['password'])) {
         // Check if email verification is required
-        if (!$user['is_verified'] && EmailConfig::EMAIL_ENABLED) {
+        if (!$user['is_verified']) {
             http_response_code(400);
             echo json_encode([
                 'success' => false, 
@@ -268,7 +292,7 @@ function handleLogin($input, $pdo, $emailService, $otpManager) {
         $stmt->execute([$user['id']]);
         
         // Check if 2FA is enabled
-        if ($user['two_factor_enabled'] && EmailConfig::EMAIL_ENABLED) {
+        if ($user['two_factor_enabled']) {
             $otp = $emailService->generateOTP();
             $otpManager->storeOTP($email, $otp, '2fa', EmailConfig::OTP_2FA_EXPIRY_MINUTES);
             
@@ -321,21 +345,14 @@ function handleForgotPassword($input, $pdo, $emailService, $otpManager) {
     $user = $stmt->fetch();
     
     if ($user) {
-        if (EmailConfig::EMAIL_ENABLED) {
-            $otp = $emailService->generateOTP();
-            $otpManager->storeOTP($email, $otp, 'password_reset');
-            
-            if ($emailService->sendPasswordResetEmail($email, $user['username'], $otp)) {
-                echo json_encode(['success' => true, 'message' => 'Password reset code sent to your email']);
-            } else {
-                http_response_code(500);
-                echo json_encode(['success' => false, 'message' => 'Failed to send reset email']);
-            }
+        $otp = $emailService->generateOTP();
+        $otpManager->storeOTP($email, $otp, 'password_reset');
+        
+        if ($emailService->sendPasswordResetEmail($email, $user['username'], $otp)) {
+            echo json_encode(['success' => true, 'message' => 'Password reset code sent to your email']);
         } else {
-            // Email disabled - provide a default reset code
-            $otp = '123456'; // Default OTP when email is disabled
-            $otpManager->storeOTP($email, $otp, 'password_reset');
-            echo json_encode(['success' => true, 'message' => 'Use code: 123456 to reset your password']);
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Failed to send reset email']);
         }
     } else {
         // Don't reveal if email exists or not for security
@@ -361,12 +378,7 @@ function handleResetPassword($input, $pdo, $otpManager) {
         return;
     }
     
-    // If email is disabled, accept the default OTP
-    $otpValid = EmailConfig::EMAIL_ENABLED 
-        ? $otpManager->verifyOTP($email, $otp, 'password_reset')
-        : ($otp === '123456');
-    
-    if ($otpValid) {
+    if ($otpManager->verifyOTP($email, $otp, 'password_reset')) {
         $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
         $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE email = ?");
         
@@ -393,12 +405,7 @@ function handleVerify2FA($input, $pdo, $otpManager) {
         return;
     }
     
-    // If email is disabled, accept any 6-digit code
-    $otpValid = EmailConfig::EMAIL_ENABLED 
-        ? $otpManager->verifyOTP($email, $otp, '2fa')
-        : (strlen($otp) === 6 && is_numeric($otp));
-    
-    if ($otpValid) {
+    if ($otpManager->verifyOTP($email, $otp, '2fa')) {
         // Generate JWT token
         $token = base64_encode(json_encode(['userId' => $userId, 'exp' => time() + 3600]));
         
@@ -447,30 +454,19 @@ function handleToggle2FA($input, $pdo, $emailService, $otpManager) {
     }
     
     if ($enable) {
-        if (EmailConfig::EMAIL_ENABLED) {
-            // Send verification code before enabling 2FA
-            $otp = $emailService->generateOTP();
-            $otpManager->storeOTP($user['email'], $otp, '2fa_setup', EmailConfig::OTP_2FA_EXPIRY_MINUTES);
-            
-            if ($emailService->send2FAEmail($user['email'], $user['username'], $otp)) {
-                echo json_encode([
-                    'success' => true,
-                    'message' => '2FA setup code sent to your email',
-                    'requiresVerification' => true
-                ]);
-            } else {
-                http_response_code(500);
-                echo json_encode(['success' => false, 'message' => 'Failed to send 2FA setup code']);
-            }
+        // Send verification code before enabling 2FA
+        $otp = $emailService->generateOTP();
+        $otpManager->storeOTP($user['email'], $otp, '2fa_setup', EmailConfig::OTP_2FA_EXPIRY_MINUTES);
+        
+        if ($emailService->send2FAEmail($user['email'], $user['username'], $otp)) {
+            echo json_encode([
+                'success' => true,
+                'message' => '2FA setup code sent to your email',
+                'requiresVerification' => true
+            ]);
         } else {
-            // Email disabled - enable 2FA without verification
-            $stmt = $pdo->prepare("UPDATE users SET two_factor_enabled = 1 WHERE id = ?");
-            if ($stmt->execute([$userId])) {
-                echo json_encode(['success' => true, 'message' => '2FA enabled successfully']);
-            } else {
-                http_response_code(500);
-                echo json_encode(['success' => false, 'message' => 'Failed to enable 2FA']);
-            }
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Failed to send 2FA setup code']);
         }
     } else {
         // Disable 2FA
