@@ -14,10 +14,10 @@ class EmailConfig {
     const SMTP_PASSWORD = 'YOUR_EMAIL_PASSWORD'; // Replace with your actual email password
     const SMTP_ENCRYPTION = 'ssl'; // SSL for port 465
     
-    // Email settings - Updated with your domain
+    // Email settings - All using support@fxgold.shop
     const FROM_EMAIL = 'support@fxgold.shop';
     const FROM_NAME = 'FxGold Trading Support';
-    const REPLY_TO = 'admin@fxgold.shop';
+    const REPLY_TO = 'support@fxgold.shop'; // Changed to support email
     
     // Website URL - Updated to your domain
     const WEBSITE_URL = 'https://fxgold.shop';
