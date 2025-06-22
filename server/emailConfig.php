@@ -291,7 +291,7 @@ class EmailService {
                 </div>
                 <div class='footer'>
                     <p><strong>FxGold Trading Platform</strong></p>
-                    <p>&copy; 2024 FxGold Trading. All rights reserved.</p>
+                    <p>&copy; 2025 FxGold Trading. All rights reserved.</p>
                     <p style='margin-top: 15px; font-size: 12px;'>This is an automated message, please do not reply to this email.</p>
                     <p style='font-size: 12px;'>Need help? Contact us at support@fxgold.shop</p>
                     <p style='font-size: 12px; margin-top: 10px;'>🌐 Website: <a href='" . EmailConfig::WEBSITE_URL . "' style='color: #10b981;'>fxgold.shop</a></p>
@@ -414,7 +414,7 @@ class EmailService {
                 </div>
                 <div class='footer'>
                     <p><strong>FxGold Trading Platform</strong></p>
-                    <p>&copy; 2024 FxGold Trading. All rights reserved.</p>
+                    <p>&copy; 2025 FxGold Trading. All rights reserved.</p>
                     <p style='margin-top: 15px; font-size: 12px;'>This is an automated message, please do not reply to this email.</p>
                     <p style='font-size: 12px;'>Need help? Contact us at support@fxgold.shop</p>
                     <p style='font-size: 12px; margin-top: 10px;'>🌐 Website: <a href='" . EmailConfig::WEBSITE_URL . "' style='color: #ef4444;'>fxgold.shop</a></p>
@@ -541,7 +541,7 @@ class EmailService {
                 </div>
                 <div class='footer'>
                     <p><strong>FxGold Trading Platform</strong></p>
-                    <p>&copy; 2024 FxGold Trading. All rights reserved.</p>
+                    <p>&copy; 2025 FxGold Trading. All rights reserved.</p>
                     <p style='margin-top: 15px; font-size: 12px;'>This is an automated message, please do not reply to this email.</p>
                     <p style='font-size: 12px;'>Need help? Contact us at support@fxgold.shop</p>
                     <p style='font-size: 12px; margin-top: 10px;'>🌐 Website: <a href='" . EmailConfig::WEBSITE_URL . "' style='color: #3b82f6;'>fxgold.shop</a></p>
