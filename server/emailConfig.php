@@ -16,7 +16,7 @@ class EmailConfig {
     
     // Gmail Account Details (for reference)
     const GMAIL_ACCOUNT = 'fxgold.info@gmail.com';
-    const GMAIL_PASSWORD = 'FxGoldSupport123!@#'; // Your Gmail account password (NOT used for SMTP)
+    const GMAIL_PASSWORD = 'Fxgold123!@#'; // Your Gmail account password (NOT used for SMTP)
     const GMAIL_APP_PASSWORD = 'svlwypaqdqlvvzqz'; // Your Gmail App Password (USED for SMTP)
     
     // Email settings - Professional branding with support email
