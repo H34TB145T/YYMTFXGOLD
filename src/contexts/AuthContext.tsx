@@ -81,13 +81,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (result.success && result.token && result.user) {
         localStorage.setItem('token', result.token);
-        setUser(result.user);
+        
+        // Ensure user has all required properties with defaults
+        const completeUser: User = {
+          ...result.user,
+          assets: result.user.assets || [],
+          transactions: result.user.transactions || [],
+          positions: result.user.positions || [],
+          balance: result.user.balance || 0,
+          usdtBalance: result.user.usdtBalance || 0,
+          marginBalance: result.user.marginBalance || 0,
+          username: result.user.username || result.user.full_name?.toLowerCase().replace(/\s+/g, ''),
+          twoFactorEnabled: result.user.twoFactorEnabled || false
+        };
+        
+        setUser(completeUser);
         
         // Also update localStorage for compatibility
         const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
         const updatedUsers = users.map((u: User) => 
-          u.email === email ? { ...u, ...result.user } : u
+          u.email === email ? { ...u, ...completeUser } : u
         );
+        
+        // If user doesn't exist in localStorage, add them
+        if (!users.some((u: User) => u.email === email)) {
+          updatedUsers.push(completeUser);
+        }
+        
         localStorage.setItem('freddyUsers', JSON.stringify(updatedUsers));
       }
       
@@ -141,9 +161,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const updateUser = (updatedUser: User) => {
-    setUser(updatedUser);
+    // Ensure updated user has all required properties
+    const completeUpdatedUser: User = {
+      ...updatedUser,
+      assets: updatedUser.assets || [],
+      transactions: updatedUser.transactions || [],
+      positions: updatedUser.positions || [],
+      balance: updatedUser.balance || 0,
+      usdtBalance: updatedUser.usdtBalance || 0,
+      marginBalance: updatedUser.marginBalance || 0,
+      username: updatedUser.username || updatedUser.full_name?.toLowerCase().replace(/\s+/g, ''),
+      twoFactorEnabled: updatedUser.twoFactorEnabled || false
+    };
+    
+    setUser(completeUpdatedUser);
+    
     const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
-    const updatedUsers = users.map((u: User) => u.id === updatedUser.id ? updatedUser : u);
+    const updatedUsers = users.map((u: User) => u.id === completeUpdatedUser.id ? completeUpdatedUser : u);
     localStorage.setItem('freddyUsers', JSON.stringify(updatedUsers));
   };
 
@@ -154,6 +188,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const user = users.find((u: User) => u.id === userId);
       
       if (user) {
+        // Ensure user has all required properties with defaults
         return {
           ...user,
           balance: user.balance ?? 1000,

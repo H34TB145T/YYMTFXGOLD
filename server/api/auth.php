@@ -105,6 +105,106 @@ switch ($method) {
         echo json_encode(['success' => false, 'message' => 'Method not allowed']);
 }
 
+function getUserCompleteData($pdo, $userId) {
+    try {
+        // Get user basic data
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch();
+        
+        if (!$user) {
+            return null;
+        }
+        
+        // Get user's crypto assets
+        $stmt = $pdo->prepare("SELECT * FROM crypto_assets WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        $assets = $stmt->fetchAll();
+        
+        // Get user's transactions
+        $stmt = $pdo->prepare("SELECT * FROM transactions WHERE user_id = ? ORDER BY timestamp DESC");
+        $stmt->execute([$userId]);
+        $transactions = $stmt->fetchAll();
+        
+        // Get user's positions
+        $stmt = $pdo->prepare("SELECT * FROM positions WHERE user_id = ? ORDER BY timestamp DESC");
+        $stmt->execute([$userId]);
+        $positions = $stmt->fetchAll();
+        
+        // Format assets for frontend
+        $formattedAssets = [];
+        foreach ($assets as $asset) {
+            $formattedAssets[] = [
+                'coinId' => $asset['coin_id'],
+                'symbol' => $asset['symbol'],
+                'name' => $asset['name'],
+                'amount' => (float)$asset['amount'],
+                'purchasePrice' => (float)$asset['purchase_price']
+            ];
+        }
+        
+        // Format transactions for frontend
+        $formattedTransactions = [];
+        foreach ($transactions as $tx) {
+            $formattedTransactions[] = [
+                'id' => $tx['id'],
+                'coinId' => $tx['coin_id'],
+                'coinName' => $tx['coin_name'],
+                'coinSymbol' => $tx['coin_symbol'],
+                'amount' => (float)$tx['amount'],
+                'price' => (float)$tx['price'],
+                'total' => (float)$tx['total'],
+                'type' => $tx['type'],
+                'status' => $tx['status'] ?? 'completed',
+                'walletAddress' => $tx['wallet_address'] ?? '',
+                'timestamp' => strtotime($tx['timestamp']) * 1000 // Convert to milliseconds
+            ];
+        }
+        
+        // Format positions for frontend
+        $formattedPositions = [];
+        foreach ($positions as $pos) {
+            $formattedPositions[] = [
+                'id' => $pos['id'],
+                'coinId' => $pos['coin_id'],
+                'coinName' => $pos['coin_name'],
+                'coinSymbol' => $pos['coin_symbol'],
+                'type' => $pos['type'],
+                'leverage' => (int)$pos['leverage'],
+                'size' => (float)$pos['size'],
+                'entryPrice' => (float)$pos['entry_price'],
+                'liquidationPrice' => (float)$pos['liquidation_price'],
+                'margin' => (float)$pos['margin'],
+                'pnl' => (float)$pos['pnl'],
+                'isOpen' => (bool)$pos['is_open'],
+                'timestamp' => strtotime($pos['timestamp']) * 1000 // Convert to milliseconds
+            ];
+        }
+        
+        // Return complete user data structure
+        return [
+            'id' => $user['id'],
+            'username' => $user['username'],
+            'email' => $user['email'],
+            'full_name' => $user['full_name'],
+            'phone' => $user['phone'] ?? '',
+            'role' => $user['role'],
+            'is_verified' => (bool)$user['is_verified'],
+            'balance' => (float)$user['balance'],
+            'usdtBalance' => (float)$user['usdt_balance'],
+            'marginBalance' => (float)$user['margin_balance'],
+            'wallet_address' => $user['wallet_address'] ?? '',
+            'twoFactorEnabled' => (bool)$user['two_factor_enabled'],
+            'assets' => $formattedAssets,
+            'transactions' => $formattedTransactions,
+            'positions' => $formattedPositions
+        ];
+    } catch (Exception $e) {
+        error_log("Error getting complete user data: " . $e->getMessage());
+        return null;
+    }
+}
+
 function handleSendVerification($input, $emailService, $otpManager) {
     $email = $input['email'] ?? '';
     $userName = $input['userName'] ?? 'User';
@@ -394,20 +494,22 @@ function handleLogin($input, $pdo, $emailService, $otpManager) {
             // Generate JWT token (simplified for demo)
             $token = base64_encode(json_encode(['userId' => $user['id'], 'exp' => time() + 3600]));
             
-            ob_clean();
-            echo json_encode([
-                'success' => true,
-                'message' => 'Login successful',
-                'token' => $token,
-                'user' => [
-                    'id' => $user['id'],
-                    'username' => $user['username'],
-                    'email' => $user['email'],
-                    'role' => $user['role'],
-                    'is_verified' => $user['is_verified'],
-                    'two_factor_enabled' => $user['two_factor_enabled']
-                ]
-            ]);
+            // Get complete user data with assets, transactions, and positions
+            $completeUserData = getUserCompleteData($pdo, $user['id']);
+            
+            if ($completeUserData) {
+                ob_clean();
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Login successful',
+                    'token' => $token,
+                    'user' => $completeUserData
+                ]);
+            } else {
+                ob_clean();
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Failed to load user data']);
+            }
         }
     } else {
         ob_clean();
@@ -504,25 +606,22 @@ function handleVerify2FA($input, $pdo, $otpManager) {
         // Generate JWT token
         $token = base64_encode(json_encode(['userId' => $userId, 'exp' => time() + 3600]));
         
-        // Get user data
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
-        $stmt->execute([$userId]);
-        $user = $stmt->fetch();
+        // Get complete user data with assets, transactions, and positions
+        $completeUserData = getUserCompleteData($pdo, $userId);
         
-        ob_clean();
-        echo json_encode([
-            'success' => true,
-            'message' => '2FA verification successful',
-            'token' => $token,
-            'user' => [
-                'id' => $user['id'],
-                'username' => $user['username'],
-                'email' => $user['email'],
-                'role' => $user['role'],
-                'is_verified' => $user['is_verified'],
-                'two_factor_enabled' => $user['two_factor_enabled']
-            ]
-        ]);
+        if ($completeUserData) {
+            ob_clean();
+            echo json_encode([
+                'success' => true,
+                'message' => '2FA verification successful',
+                'token' => $token,
+                'user' => $completeUserData
+            ]);
+        } else {
+            ob_clean();
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Failed to load user data']);
+        }
     } else {
         ob_clean();
         http_response_code(400);
