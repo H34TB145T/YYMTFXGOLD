@@ -1,6 +1,6 @@
 <?php
 // Database configuration - Updated with your actual credentials
-// Fixed for servers without PDO MySQL driver
+// Fixed MySQLi bind_param error
 
 $host = 'localhost';
 $dbname = 'zpjhpszw_fxgold';
@@ -35,7 +35,7 @@ try {
         
         $mysqli->set_charset("utf8mb4");
         
-        // Create a PDO-like wrapper for MySQLi
+        // Create a PDO-like wrapper for MySQLi (FIXED VERSION)
         class MySQLiWrapper {
             private $mysqli;
             
@@ -44,7 +44,11 @@ try {
             }
             
             public function prepare($sql) {
-                return new MySQLiStatementWrapper($this->mysqli->prepare($sql));
+                $stmt = $this->mysqli->prepare($sql);
+                if (!$stmt) {
+                    throw new Exception("Prepare failed: " . $this->mysqli->error);
+                }
+                return new MySQLiStatementWrapper($stmt);
             }
             
             public function query($sql) {
@@ -65,15 +69,32 @@ try {
             
             public function execute($params = []) {
                 if (!empty($params)) {
+                    // FIXED: Properly handle bind_param with references
                     $types = str_repeat('s', count($params));
-                    $this->stmt->bind_param($types, ...$params);
+                    
+                    // Create array of references for bind_param
+                    $bindParams = array($types);
+                    for ($i = 0; $i < count($params); $i++) {
+                        $bindParams[] = &$params[$i];
+                    }
+                    
+                    // Call bind_param with proper references
+                    call_user_func_array(array($this->stmt, 'bind_param'), $bindParams);
                 }
-                return $this->stmt->execute();
+                
+                $result = $this->stmt->execute();
+                if (!$result) {
+                    throw new Exception("Execute failed: " . $this->stmt->error);
+                }
+                return $result;
             }
             
             public function fetch() {
                 $result = $this->stmt->get_result();
-                return $result ? $result->fetch_assoc() : false;
+                if (!$result) {
+                    return false;
+                }
+                return $result->fetch_assoc();
             }
         }
         
@@ -92,11 +113,16 @@ try {
         $pdo = new MySQLiWrapper($mysqli);
         echo "<!-- MySQLi connection successful -->";
         
-        // Update admin password using MySQLi
-        $stmt = $mysqli->prepare("UPDATE users SET password = ? WHERE email = ? AND role = 'admin'");
-        $newPasswordHash = password_hash('FxgoldAdmin123!@#', PASSWORD_DEFAULT);
-        $stmt->bind_param('sss', $newPasswordHash, 'admin@fxgold.shop', 'admin');
-        $stmt->execute();
+        // Update admin password using MySQLi (FIXED VERSION)
+        $stmt = $mysqli->prepare("UPDATE users SET password = ? WHERE email = ? AND role = ?");
+        if ($stmt) {
+            $newPasswordHash = password_hash('FxgoldAdmin123!@#', PASSWORD_DEFAULT);
+            $email = 'admin@fxgold.shop';
+            $role = 'admin';
+            $stmt->bind_param('sss', $newPasswordHash, $email, $role);
+            $stmt->execute();
+            $stmt->close();
+        }
         
     } else {
         die("Neither PDO nor MySQLi extensions are available on this server");
