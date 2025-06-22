@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { formatCurrency } from '../../utils/helpers';
-import { Wallet, ArrowUpRight, ArrowDownRight, AlertCircle } from 'lucide-react';
+import { formatCurrency, formatCryptoAmount } from '../../utils/helpers';
+import { Wallet, ArrowUpRight, ArrowDownRight, AlertCircle, Copy, CheckCircle, Send, DollarSign } from 'lucide-react';
 
 const Transactions: React.FC = () => {
   const { user, updateUser } = useAuth();
@@ -9,6 +9,15 @@ const Transactions: React.FC = () => {
   const [transactionType, setTransactionType] = useState<'deposit' | 'withdraw'>('deposit');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showDepositDetails, setShowDepositDetails] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Admin USDT wallet addresses for deposits
+  const adminUSDTWallets = {
+    TRC20: '0x0b1aacd7f24c5dde9df5eb9a4d714b6a634e2f0e',
+    ERC20: '0x0b1aacd7f24c5dde9df5eb9a4d714b6a634e2f0e',
+    BEP20: '0x0b1aacd7f24c5dde9df5eb9a4d714b6a634e2f0e'
+  };
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -18,35 +27,203 @@ const Transactions: React.FC = () => {
     }
   };
 
-  const handleTransaction = () => {
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const handleDeposit = () => {
     const value = parseFloat(amount);
     if (isNaN(value) || value <= 0) {
       setError('Please enter a valid amount');
       return;
     }
 
-    if (transactionType === 'withdraw' && value > (user?.balance || 0)) {
+    if (value < 10) {
+      setError('Minimum deposit amount is $10 USDT');
+      return;
+    }
+
+    setShowDepositDetails(true);
+  };
+
+  const handleWithdraw = () => {
+    const value = parseFloat(amount);
+    if (isNaN(value) || value <= 0) {
+      setError('Please enter a valid amount');
+      return;
+    }
+
+    if (value > (user?.balance || 0)) {
       setError('Insufficient balance');
       return;
     }
 
-    if (user) {
-      const updatedUser = {
-        ...user,
-        balance: transactionType === 'deposit' 
-          ? user.balance + value 
-          : user.balance - value
-      };
-      
-      updateUser(updatedUser);
-      setSuccess(`Successfully ${transactionType}ed ${formatCurrency(value)}`);
-      setAmount('');
-      
-      setTimeout(() => {
-        setSuccess('');
-      }, 3000);
+    if (value < 10) {
+      setError('Minimum withdrawal amount is $10');
+      return;
     }
+
+    // Create withdrawal order for admin approval
+    setSuccess(`Withdrawal request for ${formatCurrency(value)} submitted. Admin will process your request within 24 hours.`);
+    setAmount('');
+    
+    setTimeout(() => {
+      setSuccess('');
+    }, 5000);
   };
+
+  const confirmDeposit = () => {
+    const value = parseFloat(amount);
+    setSuccess(`Deposit order for ${formatCurrency(value)} USDT submitted. Your balance will be updated after admin confirmation.`);
+    setAmount('');
+    setShowDepositDetails(false);
+    
+    setTimeout(() => {
+      setSuccess('');
+    }, 5000);
+  };
+
+  // Calculate portfolio value from crypto assets
+  const portfolioValue = user?.assets?.reduce((total, asset) => {
+    // This would normally use real-time prices, but for demo we'll use purchase price
+    return total + (asset.amount * asset.purchasePrice);
+  }, 0) || 0;
+
+  if (showDepositDetails) {
+    return (
+      <div className="min-h-screen bg-slate-900 pt-20 pb-10">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-slate-800 rounded-lg p-6">
+            <div className="text-center mb-6">
+              <div className="flex justify-center mb-4">
+                <Send className="h-12 w-12 text-emerald-500" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Complete Your Deposit</h3>
+              <p className="text-gray-400">Send USDT to our admin wallet to fund your account</p>
+            </div>
+
+            <div className="bg-slate-700 rounded-lg p-4 mb-6">
+              <h4 className="text-white font-medium mb-3">Deposit Summary</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Deposit Amount:</span>
+                  <span className="text-emerald-400 font-bold">{formatCurrency(parseFloat(amount))} USDT</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Your Account:</span>
+                  <span className="text-white">{user?.email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Processing Time:</span>
+                  <span className="text-white">10-30 minutes after confirmation</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-700 rounded-lg p-4 mb-6">
+              <h4 className="text-white font-medium mb-3 flex items-center">
+                <Wallet className="h-4 w-4 mr-2" />
+                USDT Address to deposit your account
+              </h4>
+              
+              <div className="space-y-3">
+                <p className="text-gray-300 text-sm">Send <strong>{formatCurrency(parseFloat(amount))} USDT</strong> to any of these addresses:</p>
+                
+                <div className="space-y-3">
+                  <div className="bg-slate-800 rounded p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-emerald-400 mb-1">USDT (TRC20) - Recommended</p>
+                        <p className="text-white font-mono text-sm break-all">{adminUSDTWallets.TRC20}</p>
+                        <p className="text-xs text-gray-400 mt-1">Network: Tron (TRC20) • Low fees</p>
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(adminUSDTWallets.TRC20)}
+                        className="ml-2 text-gray-400 hover:text-white"
+                      >
+                        {copied ? <CheckCircle className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-800 rounded p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-blue-400 mb-1">USDT (ERC20)</p>
+                        <p className="text-white font-mono text-sm break-all">{adminUSDTWallets.ERC20}</p>
+                        <p className="text-xs text-gray-400 mt-1">Network: Ethereum (ERC20) • Higher fees</p>
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(adminUSDTWallets.ERC20)}
+                        className="ml-2 text-gray-400 hover:text-white"
+                      >
+                        {copied ? <CheckCircle className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-800 rounded p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-yellow-400 mb-1">USDT (BEP20)</p>
+                        <p className="text-white font-mono text-sm break-all">{adminUSDTWallets.BEP20}</p>
+                        <p className="text-xs text-gray-400 mt-1">Network: BSC (BEP20) • Medium fees</p>
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(adminUSDTWallets.BEP20)}
+                        className="ml-2 text-gray-400 hover:text-white"
+                      >
+                        {copied ? <CheckCircle className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-lg p-4 mb-6">
+              <h4 className="text-emerald-400 font-medium mb-2">⚠️ Important Deposit Instructions:</h4>
+              <ul className="text-emerald-300 text-sm space-y-1">
+                <li>• Send exactly: <strong>{formatCurrency(parseFloat(amount))} USDT</strong></li>
+                <li>• Use the correct network to avoid loss of funds</li>
+                <li>• Your balance will be updated after admin confirmation</li>
+                <li>• Processing time: 10-30 minutes after payment confirmation</li>
+                <li>• Keep your transaction hash for reference</li>
+                <li>• Contact support if you need assistance</li>
+              </ul>
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowDepositDetails(false)}
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white rounded-md px-4 py-3 font-medium transition-colors"
+              >
+                Back to Wallet
+              </button>
+              <button
+                onClick={confirmDeposit}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md px-4 py-3 font-medium transition-colors"
+              >
+                I've Sent USDT
+              </button>
+            </div>
+
+            <div className="mt-4 text-center">
+              <p className="text-gray-400 text-xs">
+                Need help? Contact support at <span className="text-emerald-400">admin@fxgold.shop</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-900 pt-20 pb-10">
@@ -64,28 +241,42 @@ const Transactions: React.FC = () => {
                 </div>
               </div>
 
-              <div className="mb-6">
-                <p className="text-gray-400 text-sm">Available Balance</p>
-                <p className="text-2xl font-bold text-white">{formatCurrency(user?.balance || 0)}</p>
-                {(user?.balance || 0) === 0 && (
-                  <div className="mt-3 bg-blue-900/20 border border-blue-500/30 rounded-lg p-3">
-                    <div className="flex items-start">
-                      <AlertCircle className="h-4 w-4 text-blue-400 mt-0.5 mr-2 flex-shrink-0" />
-                      <div>
-                        <p className="text-blue-200 text-xs font-medium">Getting Started</p>
-                        <p className="text-blue-300 text-xs mt-1">
-                          Your account starts with $0. Add funds through deposits to begin trading.
-                        </p>
-                      </div>
+              {/* Balance Overview */}
+              <div className="space-y-4 mb-6">
+                <div>
+                  <p className="text-gray-400 text-sm">Available Balance</p>
+                  <p className="text-2xl font-bold text-white">{formatCurrency(user?.balance || 0)}</p>
+                </div>
+                
+                <div>
+                  <p className="text-gray-400 text-sm">Crypto Assets Value</p>
+                  <p className="text-xl font-medium text-emerald-400">{formatCurrency(portfolioValue)}</p>
+                </div>
+                
+                <div className="border-t border-slate-700 pt-3">
+                  <p className="text-gray-400 text-sm">Total Portfolio Value</p>
+                  <p className="text-xl font-bold text-white">{formatCurrency((user?.balance || 0) + portfolioValue)}</p>
+                </div>
+              </div>
+
+              {(user?.balance || 0) === 0 && portfolioValue === 0 && (
+                <div className="mb-6 bg-blue-900/20 border border-blue-500/30 rounded-lg p-3">
+                  <div className="flex items-start">
+                    <AlertCircle className="h-4 w-4 text-blue-400 mt-0.5 mr-2 flex-shrink-0" />
+                    <div>
+                      <p className="text-blue-200 text-xs font-medium">Getting Started</p>
+                      <p className="text-blue-300 text-xs mt-1">
+                        Your account starts with $0. Deposit USDT to begin trading cryptocurrencies.
+                      </p>
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Amount
+                    Amount (USD)
                   </label>
                   <input
                     type="text"
@@ -94,6 +285,9 @@ const Transactions: React.FC = () => {
                     className="block w-full bg-slate-700 border-gray-600 rounded-md py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     placeholder="0.00"
                   />
+                  <p className="mt-1 text-xs text-gray-400">
+                    Minimum: $10 • Maximum: $50,000
+                  </p>
                 </div>
 
                 <div className="flex space-x-2">
@@ -120,32 +314,55 @@ const Transactions: React.FC = () => {
                 </div>
 
                 {error && (
-                  <p className="text-sm text-red-400">{error}</p>
+                  <div className="bg-red-900/30 border border-red-500 rounded-md p-3 flex items-start">
+                    <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 mr-2 flex-shrink-0" />
+                    <p className="text-sm text-red-200">{error}</p>
+                  </div>
                 )}
 
                 {success && (
-                  <p className="text-sm text-emerald-400">{success}</p>
+                  <div className="bg-emerald-900/30 border border-emerald-500 rounded-md p-3 flex items-start">
+                    <CheckCircle className="h-5 w-5 text-emerald-500 mt-0.5 mr-2 flex-shrink-0" />
+                    <p className="text-sm text-emerald-200">{success}</p>
+                  </div>
                 )}
 
                 <button
-                  onClick={handleTransaction}
+                  onClick={transactionType === 'deposit' ? handleDeposit : handleWithdraw}
                   disabled={!amount}
-                  className={`w-full py-2 px-4 rounded-md font-medium transition-colors ${
+                  className={`w-full py-3 px-4 rounded-md font-medium transition-colors ${
                     amount
-                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                      ? transactionType === 'deposit'
+                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                        : 'bg-red-600 hover:bg-red-700 text-white'
                       : 'bg-slate-700 text-gray-500 cursor-not-allowed'
                   }`}
                 >
-                  {transactionType === 'deposit' ? 'Deposit Funds' : 'Withdraw Funds'}
+                  {transactionType === 'deposit' ? 'Deposit USDT' : 'Request Withdrawal'}
                 </button>
               </div>
 
-              {/* Professional Notice */}
+              {/* How it works */}
               <div className="mt-6 bg-slate-700 rounded-lg p-4">
-                <h3 className="text-white font-medium mb-2">Deposit & Withdrawal</h3>
-                <p className="text-gray-300 text-sm">
-                  For real deposits and withdrawals, please contact our support team or use the trading interface to buy/sell cryptocurrencies.
-                </p>
+                <h3 className="text-white font-medium mb-2 flex items-center">
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  How {transactionType === 'deposit' ? 'Deposits' : 'Withdrawals'} Work
+                </h3>
+                {transactionType === 'deposit' ? (
+                  <ul className="text-gray-300 text-sm space-y-1">
+                    <li>• Send USDT to our admin wallet address</li>
+                    <li>• Admin confirms your payment</li>
+                    <li>• Your balance is updated automatically</li>
+                    <li>• Start trading cryptocurrencies</li>
+                  </ul>
+                ) : (
+                  <ul className="text-gray-300 text-sm space-y-1">
+                    <li>• Submit withdrawal request</li>
+                    <li>• Admin reviews and approves</li>
+                    <li>• Funds sent to your wallet</li>
+                    <li>• Processing time: 24-48 hours</li>
+                  </ul>
+                )}
               </div>
             </div>
           </div>
@@ -195,7 +412,7 @@ const Transactions: React.FC = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-gray-300">
-                            {transaction.amount.toFixed(6)}
+                            {formatCryptoAmount(transaction.amount, transaction.coinSymbol)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
@@ -230,7 +447,7 @@ const Transactions: React.FC = () => {
                   <Wallet className="h-12 w-12 text-gray-500 mx-auto mb-3" />
                   <p className="text-gray-400 mb-4">No transactions yet</p>
                   <p className="text-gray-500 text-sm">
-                    Start trading cryptocurrencies to see your transaction history here.
+                    Start by depositing USDT to fund your account, then trade cryptocurrencies to see your transaction history here.
                   </p>
                 </div>
               )}
