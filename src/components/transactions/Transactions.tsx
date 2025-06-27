@@ -11,6 +11,7 @@ const Transactions: React.FC = () => {
   const [success, setSuccess] = useState('');
   const [showDepositDetails, setShowDepositDetails] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [withdrawalAddress, setWithdrawalAddress] = useState('');
 
   // Admin USDT wallet addresses for deposits
   const adminUSDTWallets = {
@@ -19,12 +20,21 @@ const Transactions: React.FC = () => {
     BEP20: '0x0b1aacd7f24c5dde9df5eb9a4d714b6a634e2f0e'
   };
 
+  // Admin BTC and ETH wallet addresses
+  const adminBTCWallet = 'bc1qj4pash8heu35j9s9e4afsq4jfw25und9kkml4w70wezwx3y4gvus558seq';
+  const adminETHWallet = '0x0b1aacd7f24c5dde9df5eb9a4d714b6a634e2f0e';
+
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
       setAmount(value);
       setError('');
     }
+  };
+
+  const handleWithdrawalAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setWithdrawalAddress(e.target.value);
+    setError('');
   };
 
   const copyToClipboard = async (text: string) => {
@@ -69,9 +79,15 @@ const Transactions: React.FC = () => {
       return;
     }
 
+    if (!withdrawalAddress) {
+      setError('Please enter your USDT wallet address to receive funds');
+      return;
+    }
+
     // Create withdrawal order for admin approval
-    setSuccess(`Withdrawal request for ${formatCurrency(value)} submitted. Admin will process your request within 24 hours.`);
+    setSuccess(`Withdrawal request for ${formatCurrency(value)} submitted. Admin will process your request within 24 hours. Funds will be sent to ${withdrawalAddress}`);
     setAmount('');
+    setWithdrawalAddress('');
     
     setTimeout(() => {
       setSuccess('');
@@ -187,6 +203,50 @@ const Transactions: React.FC = () => {
               </div>
             </div>
 
+            <div className="bg-slate-700 rounded-lg p-4 mb-6">
+              <h4 className="text-white font-medium mb-3 flex items-center">
+                <Wallet className="h-4 w-4 mr-2" />
+                Bitcoin (BTC) Address
+              </h4>
+              
+              <div className="bg-slate-800 rounded p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-white font-mono text-sm break-all">{adminBTCWallet}</p>
+                    <p className="text-xs text-gray-400 mt-1">Bitcoin Mainnet</p>
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(adminBTCWallet)}
+                    className="ml-2 text-gray-400 hover:text-white"
+                  >
+                    {copied ? <CheckCircle className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-700 rounded-lg p-4 mb-6">
+              <h4 className="text-white font-medium mb-3 flex items-center">
+                <Wallet className="h-4 w-4 mr-2" />
+                Ethereum (ETH) Address
+              </h4>
+              
+              <div className="bg-slate-800 rounded p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-white font-mono text-sm break-all">{adminETHWallet}</p>
+                    <p className="text-xs text-gray-400 mt-1">Ethereum Mainnet</p>
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(adminETHWallet)}
+                    className="ml-2 text-gray-400 hover:text-white"
+                  >
+                    {copied ? <CheckCircle className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-lg p-4 mb-6">
               <h4 className="text-emerald-400 font-medium mb-2">⚠️ Important Deposit Instructions:</h4>
               <ul className="text-emerald-300 text-sm space-y-1">
@@ -259,20 +319,6 @@ const Transactions: React.FC = () => {
                 </div>
               </div>
 
-              {(user?.balance || 0) === 0 && portfolioValue === 0 && (
-                <div className="mb-6 bg-blue-900/20 border border-blue-500/30 rounded-lg p-3">
-                  <div className="flex items-start">
-                    <AlertCircle className="h-4 w-4 text-blue-400 mt-0.5 mr-2 flex-shrink-0" />
-                    <div>
-                      <p className="text-blue-200 text-xs font-medium">Getting Started</p>
-                      <p className="text-blue-300 text-xs mt-1">
-                        Your account starts with $0. Deposit USDT to begin trading cryptocurrencies.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -289,6 +335,24 @@ const Transactions: React.FC = () => {
                     Minimum: $10 • Maximum: $50,000
                   </p>
                 </div>
+
+                {transactionType === 'withdraw' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Your USDT Wallet Address
+                    </label>
+                    <input
+                      type="text"
+                      value={withdrawalAddress}
+                      onChange={handleWithdrawalAddressChange}
+                      className="block w-full bg-slate-700 border-gray-600 rounded-md py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                      placeholder="Enter your USDT wallet address"
+                    />
+                    <p className="mt-1 text-xs text-gray-400">
+                      Funds will be sent to this address after admin approval
+                    </p>
+                  </div>
+                )}
 
                 <div className="flex space-x-2">
                   <button
@@ -329,9 +393,9 @@ const Transactions: React.FC = () => {
 
                 <button
                   onClick={transactionType === 'deposit' ? handleDeposit : handleWithdraw}
-                  disabled={!amount}
+                  disabled={!amount || (transactionType === 'withdraw' && !withdrawalAddress)}
                   className={`w-full py-3 px-4 rounded-md font-medium transition-colors ${
-                    amount
+                    amount && (transactionType !== 'withdraw' || withdrawalAddress)
                       ? transactionType === 'deposit'
                         ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                         : 'bg-red-600 hover:bg-red-700 text-white'
@@ -357,9 +421,9 @@ const Transactions: React.FC = () => {
                   </ul>
                 ) : (
                   <ul className="text-gray-300 text-sm space-y-1">
-                    <li>• Submit withdrawal request</li>
+                    <li>• Submit withdrawal request with your wallet address</li>
                     <li>• Admin reviews and approves</li>
-                    <li>• Funds sent to your wallet</li>
+                    <li>• Funds sent to your provided wallet address</li>
                     <li>• Processing time: 24-48 hours</li>
                   </ul>
                 )}
