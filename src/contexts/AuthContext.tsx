@@ -7,7 +7,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; message: string; requires2FA?: boolean; userId?: string; requiresVerification?: boolean }>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; message: string; requires2FA?: boolean; userId?: string; requiresVerification?: boolean }>;
   register: (email: string, password: string, fullName: string, phone: string) => Promise<{ success: boolean; message: string; requiresVerification?: boolean }>;
   logout: () => void;
   updateUser: (updatedUser: User) => void;
@@ -27,6 +27,12 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// Token expiration times
+const TOKEN_EXPIRY = {
+  DEFAULT: 24 * 60 * 60 * 1000, // 24 hours
+  REMEMBER_ME: 30 * 24 * 60 * 60 * 1000 // 30 days
+};
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,17 +41,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Initialize admin user if not exists
     initializeAdminUser();
     
-    const token = localStorage.getItem('token');
-    if (token) {
-      const currentUser = getCurrentUser(token);
-      if (currentUser) {
-        setUser(currentUser);
-      } else {
-        localStorage.removeItem('token');
-      }
-    }
-    setLoading(false);
+    // Try to restore user session
+    restoreUserSession();
   }, []);
+
+  const restoreUserSession = () => {
+    try {
+      // Check for token in localStorage
+      const token = localStorage.getItem('token');
+      // Check for token in sessionStorage (for session-only login)
+      const sessionToken = sessionStorage.getItem('token');
+      
+      // Use token from localStorage or sessionStorage
+      const activeToken = token || sessionToken;
+      
+      if (activeToken) {
+        // Check token expiration
+        const tokenData = JSON.parse(atob(activeToken.split('.')[1]));
+        const expirationTime = tokenData.exp * 1000; // Convert to milliseconds
+        
+        if (Date.now() < expirationTime) {
+          // Token is still valid
+          const currentUser = getCurrentUser(activeToken);
+          if (currentUser) {
+            setUser(currentUser);
+          } else {
+            // User not found, clear tokens
+            localStorage.removeItem('token');
+            sessionStorage.removeItem('token');
+          }
+        } else {
+          // Token expired, clear it
+          localStorage.removeItem('token');
+          sessionStorage.removeItem('token');
+        }
+      }
+    } catch (error) {
+      console.error('Error restoring session:', error);
+      // Clear potentially corrupted tokens
+      localStorage.removeItem('token');
+      sessionStorage.removeItem('token');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const initializeAdminUser = () => {
     const users = JSON.parse(localStorage.getItem('fxgoldUsers') || '[]');
@@ -74,13 +113,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, rememberMe = false) => {
     try {
       // Use backend API for login
       const result = await authService.login(email, password);
       
       if (result.success && result.token && result.user) {
-        localStorage.setItem('token', result.token);
+        // Store token based on remember me preference
+        if (rememberMe) {
+          // Create a token with longer expiration
+          const tokenPayload = {
+            userId: result.user.id,
+            exp: Math.floor(Date.now() / 1000) + (TOKEN_EXPIRY.REMEMBER_ME / 1000)
+          };
+          const longToken = btoa(JSON.stringify(tokenPayload));
+          localStorage.setItem('token', longToken);
+        } else {
+          // Store in sessionStorage for session-only login
+          sessionStorage.setItem('token', result.token);
+        }
         
         // Ensure user has all required properties with defaults
         const completeUser: User = {
@@ -156,7 +207,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
+    // Clear both localStorage and sessionStorage tokens
     localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
     setUser(null);
   };
 
@@ -183,7 +236,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const getCurrentUser = (token: string): User | null => {
     try {
-      const userId = token.replace('demo-token-', '');
+      // Parse the token to get user ID
+      const tokenData = JSON.parse(atob(token.split('.')[1]));
+      const userId = tokenData.userId;
+      
       const users = JSON.parse(localStorage.getItem('fxgoldUsers') || '[]');
       const user = users.find((u: User) => u.id === userId);
       

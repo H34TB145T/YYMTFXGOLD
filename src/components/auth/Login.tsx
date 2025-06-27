@@ -16,6 +16,7 @@ const Login: React.FC = () => {
   const [show2FA, setShow2FA] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [twoFAUserId, setTwoFAUserId] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -38,7 +39,7 @@ const Login: React.FC = () => {
       return;
     }
     
-    const result = await login(email, password);
+    const result = await login(email, password, rememberMe);
     
     if (result.success) {
       if (result.requires2FA && result.userId) {
@@ -167,6 +168,19 @@ const Login: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-600 rounded bg-slate-700"
+                />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-400">
+                  Remember me
+                </label>
+              </div>
               <div className="text-sm">
                 <button
                   type="button"
