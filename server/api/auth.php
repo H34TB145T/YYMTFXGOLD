@@ -228,11 +228,14 @@ function handleSendVerification($input, $emailService, $otpManager) {
     $otp = $emailService->generateOTP();
     $otpManager->storeOTP($email, $otp, 'verification');
     
+    error_log("Generated verification OTP: $otp for email: $email");
+    
     if ($emailService->sendVerificationEmail($email, $userName, $otp)) {
         ob_clean();
         echo json_encode([
             'success' => true, 
-            'message' => 'Verification email sent successfully! Please check your inbox.'
+            'message' => 'Verification email sent successfully! Please check your inbox.',
+            'debug_otp' => $otp // Remove this in production
         ]);
     } else {
         ob_clean();
@@ -336,7 +339,8 @@ function handleRegister($input, $pdo, $emailService, $otpManager) {
                         'success' => true, 
                         'message' => 'Registration successful! Please check your email for verification code.',
                         'userId' => $userId,
-                        'requiresVerification' => true
+                        'requiresVerification' => true,
+                        'debug_otp' => $otp // Remove this in production
                     ]);
                 } else {
                     error_log("Failed to send verification email to $email");
@@ -387,18 +391,23 @@ function handleVerifyEmail($input, $pdo, $otpManager) {
         return;
     }
     
+    error_log("Verifying email: $email with OTP: $otp");
+    
     if ($otpManager->verifyOTP($email, $otp, 'verification')) {
         // Update user as verified
         $stmt = $pdo->prepare("UPDATE users SET is_verified = 1 WHERE email = ?");
         if ($stmt->execute([$email])) {
+            error_log("User verified successfully: $email");
             ob_clean();
             echo json_encode(['success' => true, 'message' => 'Email verified successfully! You can now login.']);
         } else {
+            error_log("Failed to update verification status for: $email");
             ob_clean();
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Failed to update verification status']);
         }
     } else {
+        error_log("OTP verification failed for: $email with OTP: $otp");
         ob_clean();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Invalid or expired OTP. Please request a new code.']);
@@ -438,9 +447,15 @@ function handleResendVerification($input, $pdo, $emailService, $otpManager) {
     $otp = $emailService->generateOTP();
     $otpManager->storeOTP($email, $otp, 'verification');
     
+    error_log("Resending verification OTP: $otp for email: $email");
+    
     if ($emailService->sendVerificationEmail($email, $user['username'], $otp)) {
         ob_clean();
-        echo json_encode(['success' => true, 'message' => 'New verification code sent to your email']);
+        echo json_encode([
+            'success' => true, 
+            'message' => 'New verification code sent to your email',
+            'debug_otp' => $otp // Remove this in production
+        ]);
     } else {
         ob_clean();
         http_response_code(500);
@@ -551,9 +566,15 @@ function handleForgotPassword($input, $pdo, $emailService, $otpManager) {
         $otp = $emailService->generateOTP();
         $otpManager->storeOTP($email, $otp, 'password_reset');
         
+        error_log("Password reset OTP generated: $otp for email: $email");
+        
         if ($emailService->sendPasswordResetEmail($email, $user['username'], $otp)) {
             ob_clean();
-            echo json_encode(['success' => true, 'message' => 'Password reset code sent to your email']);
+            echo json_encode([
+                'success' => true, 
+                'message' => 'Password reset code sent to your email',
+                'debug_otp' => $otp // Remove this in production
+            ]);
         } else {
             ob_clean();
             http_response_code(500);
@@ -586,19 +607,24 @@ function handleResetPassword($input, $pdo, $otpManager) {
         return;
     }
     
+    error_log("Attempting password reset for email: $email with OTP: $otp");
+    
     if ($otpManager->verifyOTP($email, $otp, 'password_reset')) {
         $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
         $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE email = ?");
         
         if ($stmt->execute([$hashedPassword, $email])) {
+            error_log("Password reset successful for email: $email");
             ob_clean();
             echo json_encode(['success' => true, 'message' => 'Password reset successfully']);
         } else {
+            error_log("Failed to update password in database for email: $email");
             ob_clean();
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Failed to update password']);
         }
     } else {
+        error_log("OTP verification failed for password reset: email=$email, otp=$otp");
         ob_clean();
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Invalid or expired OTP']);
