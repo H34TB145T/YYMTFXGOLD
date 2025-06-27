@@ -10,6 +10,7 @@ Header always set Content-Security-Policy "default-src 'self'; script-src 'self'
     Header set Access-Control-Allow-Origin "*"
     Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
     Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+    Header set Access-Control-Allow-Credentials "true"
     Header set Access-Control-Max-Age "3600"
 </IfModule>
 
@@ -42,6 +43,14 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 php_flag display_errors Off
 php_flag log_errors On
 php_value error_log /path/to/your/error.log
+
+# Session settings for persistence
+php_value session.cookie_lifetime 2592000
+php_value session.gc_maxlifetime 2592000
+php_value session.cookie_secure On
+php_value session.cookie_httponly On
+php_value session.use_only_cookies On
+php_value session.use_strict_mode On
 
 # Prevent directory browsing
 Options -Indexes

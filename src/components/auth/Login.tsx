@@ -1,24 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import TwoFactorAuth from './TwoFactorAuth';
 import ForgotPasswordModal from './ForgotPasswordModal';
-import { Wallet, AlertCircle, CheckCircle, Eye, EyeOff, Mail, Lock, Key } from 'lucide-react';
+import { Wallet, AlertCircle, CheckCircle, Eye, EyeOff, Mail, Lock, Key, RefreshCw } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [searchParams] = useSearchParams();
   const verified = searchParams.get('verified');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [show2FA, setShow2FA] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [twoFAUserId, setTwoFAUserId] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +46,7 @@ const Login: React.FC = () => {
       return;
     }
     
+    console.log('🔐 Logging in with remember me:', rememberMe);
     const result = await login(email, password, rememberMe);
     
     if (result.success) {
@@ -199,7 +207,14 @@ const Login: React.FC = () => {
                 disabled={loading || !email || !password}
                 className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {loading ? 'Signing in...' : 'Sign in'}
+                {loading ? (
+                  <div className="flex items-center">
+                    <RefreshCw className="h-5 w-5 animate-spin mr-2" />
+                    Signing in...
+                  </div>
+                ) : (
+                  'Sign in'
+                )}
               </button>
             </div>
             

@@ -27,12 +27,6 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Token expiration times
-const TOKEN_EXPIRY = {
-  DEFAULT: 24 * 60 * 60 * 1000, // 24 hours
-  REMEMBER_ME: 30 * 24 * 60 * 60 * 1000 // 30 days
-};
-
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,47 +38,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Try to restore user session
     restoreUserSession();
   }, []);
-
-  const restoreUserSession = () => {
-    try {
-      // Check for token in localStorage
-      const token = localStorage.getItem('token');
-      // Check for token in sessionStorage (for session-only login)
-      const sessionToken = sessionStorage.getItem('token');
-      
-      // Use token from localStorage or sessionStorage
-      const activeToken = token || sessionToken;
-      
-      if (activeToken) {
-        // Check token expiration
-        const tokenData = JSON.parse(atob(activeToken.split('.')[1]));
-        const expirationTime = tokenData.exp * 1000; // Convert to milliseconds
-        
-        if (Date.now() < expirationTime) {
-          // Token is still valid
-          const currentUser = getCurrentUser(activeToken);
-          if (currentUser) {
-            setUser(currentUser);
-          } else {
-            // User not found, clear tokens
-            localStorage.removeItem('token');
-            sessionStorage.removeItem('token');
-          }
-        } else {
-          // Token expired, clear it
-          localStorage.removeItem('token');
-          sessionStorage.removeItem('token');
-        }
-      }
-    } catch (error) {
-      console.error('Error restoring session:', error);
-      // Clear potentially corrupted tokens
-      localStorage.removeItem('token');
-      sessionStorage.removeItem('token');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const initializeAdminUser = () => {
     const users = JSON.parse(localStorage.getItem('fxgoldUsers') || '[]');
@@ -113,24 +66,70 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const restoreUserSession = () => {
+    try {
+      // Check for token in localStorage (short-term session)
+      const token = localStorage.getItem('token');
+      
+      // Check for persistent token in sessionStorage (browser session)
+      const sessionToken = sessionStorage.getItem('token');
+      
+      // Check for persistent token in localStorage (remember me)
+      const persistentToken = localStorage.getItem('persistentToken');
+      
+      let currentUser = null;
+      
+      if (token) {
+        // Regular session token
+        currentUser = getCurrentUser(token);
+      } else if (sessionToken) {
+        // Browser session token
+        currentUser = getCurrentUser(sessionToken);
+        // Store in localStorage for current session
+        if (currentUser) {
+          localStorage.setItem('token', sessionToken);
+        }
+      } else if (persistentToken) {
+        // Persistent login (remember me)
+        currentUser = getCurrentUser(persistentToken);
+        // Store in both storages
+        if (currentUser) {
+          localStorage.setItem('token', persistentToken);
+          sessionStorage.setItem('token', persistentToken);
+        }
+      }
+      
+      if (currentUser) {
+        console.log('✅ Session restored for user:', currentUser.email);
+        setUser(currentUser);
+      } else {
+        // Clear any invalid tokens
+        localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
+        localStorage.removeItem('persistentToken');
+      }
+    } catch (error) {
+      console.error('Error restoring session:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const login = async (email: string, password: string, rememberMe = false) => {
     try {
       // Use backend API for login
       const result = await authService.login(email, password);
       
       if (result.success && result.token && result.user) {
-        // Store token based on remember me preference
+        // Store token in localStorage (current session)
+        localStorage.setItem('token', result.token);
+        
+        // Store token in sessionStorage (browser session)
+        sessionStorage.setItem('token', result.token);
+        
+        // If remember me is checked, store persistent token
         if (rememberMe) {
-          // Create a token with longer expiration
-          const tokenPayload = {
-            userId: result.user.id,
-            exp: Math.floor(Date.now() / 1000) + (TOKEN_EXPIRY.REMEMBER_ME / 1000)
-          };
-          const longToken = btoa(JSON.stringify(tokenPayload));
-          localStorage.setItem('token', longToken);
-        } else {
-          // Store in sessionStorage for session-only login
-          sessionStorage.setItem('token', result.token);
+          localStorage.setItem('persistentToken', result.token);
         }
         
         // Ensure user has all required properties with defaults
@@ -207,9 +206,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
-    // Clear both localStorage and sessionStorage tokens
+    // Clear all tokens
     localStorage.removeItem('token');
     sessionStorage.removeItem('token');
+    localStorage.removeItem('persistentToken');
     setUser(null);
   };
 
@@ -236,10 +236,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const getCurrentUser = (token: string): User | null => {
     try {
-      // Parse the token to get user ID
-      const tokenData = JSON.parse(atob(token.split('.')[1]));
-      const userId = tokenData.userId;
-      
+      const userId = token.replace('demo-token-', '');
       const users = JSON.parse(localStorage.getItem('fxgoldUsers') || '[]');
       const user = users.find((u: User) => u.id === userId);
       

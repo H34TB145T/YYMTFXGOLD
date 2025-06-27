@@ -29,7 +29,8 @@ export const authService = {
           password,
           username,
           fullName
-        })
+        }),
+        credentials: 'include' // Include cookies in the request
       });
 
       if (!response.ok) {
@@ -62,7 +63,8 @@ export const authService = {
           action: 'verify_email',
           email,
           otp
-        })
+        }),
+        credentials: 'include' // Include cookies in the request
       });
 
       const result = await response.json();
@@ -90,7 +92,8 @@ export const authService = {
         body: JSON.stringify({
           action: 'resend_verification',
           email
-        })
+        }),
+        credentials: 'include' // Include cookies in the request
       });
 
       const result = await response.json();
@@ -119,7 +122,8 @@ export const authService = {
           action: 'login',
           email,
           password
-        })
+        }),
+        credentials: 'include' // Include cookies in the request
       });
 
       const result = await response.json();
@@ -145,7 +149,8 @@ export const authService = {
         body: JSON.stringify({
           action: 'forgot_password',
           email
-        })
+        }),
+        credentials: 'include' // Include cookies in the request
       });
 
       const result = await response.json();
@@ -171,7 +176,8 @@ export const authService = {
           email,
           otp,
           newPassword
-        })
+        }),
+        credentials: 'include' // Include cookies in the request
       });
 
       const result = await response.json();
@@ -197,7 +203,8 @@ export const authService = {
           email,
           otp,
           userId
-        })
+        }),
+        credentials: 'include' // Include cookies in the request
       });
 
       const result = await response.json();
@@ -222,7 +229,8 @@ export const authService = {
           action: 'toggle_2fa',
           userId,
           enable
-        })
+        }),
+        credentials: 'include' // Include cookies in the request
       });
 
       const result = await response.json();
@@ -247,7 +255,8 @@ export const authService = {
           action: 'update_username',
           userId,
           newUsername
-        })
+        }),
+        credentials: 'include' // Include cookies in the request
       });
 
       const result = await response.json();
@@ -273,7 +282,8 @@ export const authService = {
           userId,
           currentPassword,
           newPassword
-        })
+        }),
+        credentials: 'include' // Include cookies in the request
       });
 
       const result = await response.json();
