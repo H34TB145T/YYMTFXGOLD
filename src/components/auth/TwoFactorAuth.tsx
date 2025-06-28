@@ -16,6 +16,7 @@ const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ email, userId, onSuccess,
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
+  const [rememberMe, setRememberMe] = useState(false); // Added remember me state
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -53,7 +54,14 @@ const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ email, userId, onSuccess,
       
       if (result.success) {
         if (result.token && result.user) {
-          localStorage.setItem('token', result.token);
+          // Store token based on remember me preference
+          if (rememberMe) {
+            localStorage.setItem('token', result.token);
+            localStorage.setItem('persistentToken', result.token);
+          } else {
+            localStorage.setItem('token', result.token);
+            sessionStorage.setItem('token', result.token);
+          }
         }
         setSuccess('2FA verification successful!');
         setTimeout(() => {
@@ -149,6 +157,21 @@ const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ email, userId, onSuccess,
                 )}
               </p>
             </div>
+          </div>
+
+          {/* Remember Me Checkbox */}
+          <div className="flex items-center">
+            <input
+              id="remember-2fa"
+              name="remember-2fa"
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-600 rounded bg-slate-700"
+            />
+            <label htmlFor="remember-2fa" className="ml-2 block text-sm text-gray-400">
+              Remember me on this device
+            </label>
           </div>
 
           <div className="flex space-x-3">

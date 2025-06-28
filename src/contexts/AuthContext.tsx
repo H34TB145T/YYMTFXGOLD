@@ -8,7 +8,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; message: string; requires2FA?: boolean; userId?: string; requiresVerification?: boolean }>;
-  register: (email: string, password: string, fullName: string, phone: string) => Promise<{ success: boolean; message: string; requiresVerification?: boolean }>;
+  register: (email: string, password: string, username: string, fullName: string) => Promise<{ success: boolean; message: string; requiresVerification?: boolean }>;
   logout: () => void;
   updateUser: (updatedUser: User) => void;
 }
@@ -168,10 +168,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const register = async (email: string, password: string, fullName: string, phone: string) => {
+  const register = async (email: string, password: string, username: string, fullName: string) => {
     try {
-      // 🚀 USE BACKEND API INSTEAD OF LOCALSTORAGE
-      const result = await authService.register(email, password, fullName, fullName);
+      // Use backend API for registration
+      const result = await authService.register(email, password, username, fullName);
       
       if (result.success) {
         // Also save to localStorage for compatibility
@@ -181,7 +181,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           id: result.userId || uuidv4(),
           email,
           full_name: fullName,
-          phone,
+          phone: '',
           role: 'user',
           is_verified: false,
           balance: 0, // NO default balance for new users
@@ -190,7 +190,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           assets: [],
           transactions: [],
           positions: [],
-          username: fullName.toLowerCase().replace(/\s+/g, ''),
+          username: username,
           twoFactorEnabled: false
         };
         
@@ -236,6 +236,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const getCurrentUser = (token: string): User | null => {
     try {
+      // For API-based authentication, extract user ID from token
+      // This is a simplified version - in production, you'd verify the token
+      const tokenParts = token.split('.');
+      if (tokenParts.length === 3) {
+        try {
+          // Try to parse as JWT
+          const payload = JSON.parse(atob(tokenParts[1]));
+          const userId = payload.userId;
+          
+          // Get user from localStorage
+          const users = JSON.parse(localStorage.getItem('fxgoldUsers') || '[]');
+          const user = users.find((u: User) => u.id === userId);
+          
+          if (user) {
+            // Ensure user has all required properties with defaults
+            return {
+              ...user,
+              balance: user.balance ?? 0, // No default balance
+              usdtBalance: user.usdtBalance ?? 0,
+              marginBalance: user.marginBalance ?? 0,
+              assets: user.assets ?? [],
+              transactions: user.transactions ?? [],
+              positions: user.positions ?? [],
+              username: user.username ?? user.full_name?.toLowerCase().replace(/\s+/g, ''),
+              twoFactorEnabled: user.twoFactorEnabled ?? false,
+              is_verified: user.is_verified ?? false
+            };
+          }
+        } catch (e) {
+          console.error('Error parsing token:', e);
+        }
+      }
+      
+      // Fallback to legacy token format
       const userId = token.replace('demo-token-', '');
       const users = JSON.parse(localStorage.getItem('fxgoldUsers') || '[]');
       const user = users.find((u: User) => u.id === userId);
