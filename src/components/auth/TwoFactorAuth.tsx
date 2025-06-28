@@ -215,7 +215,7 @@ const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ email, userId, onSuccess,
                   Sending...
                 </>
               ) : timeLeft > 240 ? (
-                `Resend available in ${formatTime(300 - timeLeft)}`
+                `Resend available in ${formatTime(Math.max(0, 300 - timeLeft))}`
               ) : (
                 'Resend 2FA code'
               )}

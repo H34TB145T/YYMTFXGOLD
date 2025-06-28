@@ -118,7 +118,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string, rememberMe = false) => {
     try {
       // Use backend API for login
-      const result = await authService.login(email, password);
+      const result = await authService.login(email, password, rememberMe);
       
       if (result.success && result.token && result.user) {
         // Store token in localStorage (current session)

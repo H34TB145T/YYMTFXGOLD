@@ -48,13 +48,18 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ onClose, onSu
       return;
     }
 
-    const result = await authService.forgotPassword(email);
-    
-    if (result.success) {
-      setSuccess('Password reset code sent to your email! Please check your inbox.');
-      setStep('otp');
-    } else {
-      setError(result.message);
+    try {
+      const result = await authService.forgotPassword(email);
+      
+      if (result.success) {
+        setSuccess('Password reset code sent to your email! Please check your inbox.');
+        setStep('otp');
+      } else {
+        setError(result.message || 'Failed to send reset code. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error sending reset code:', error);
+      setError('An unexpected error occurred. Please try again.');
     }
     
     setLoading(false);
@@ -142,13 +147,18 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ onClose, onSu
     setLoading(true);
     setError('');
     
-    const result = await authService.forgotPassword(email);
-    
-    if (result.success) {
-      setSuccess('New password reset code sent to your email');
-      setTimeout(() => setSuccess(''), 3000);
-    } else {
-      setError(result.message);
+    try {
+      const result = await authService.forgotPassword(email);
+      
+      if (result.success) {
+        setSuccess('New password reset code sent to your email');
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(result.message || 'Failed to resend code. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error resending code:', error);
+      setError('An unexpected error occurred. Please try again.');
     }
     
     setLoading(false);

@@ -3,7 +3,7 @@ export const API_CONFIG = {
   // Updated to use your actual domain
   BASE_URL: process.env.NODE_ENV === 'production' 
     ? 'https://fxgold.shop/api' 
-    : 'http://localhost/api',
+    : '/api',
   
   ENDPOINTS: {
     AUTH: '/auth.php',
@@ -31,7 +31,8 @@ export const apiRequest = async (endpoint: string, options: RequestInit = {}) =>
     headers: {
       ...API_CONFIG.HEADERS,
       ...options.headers
-    }
+    },
+    credentials: 'include' // Include cookies in all requests
   };
   
   try {
