@@ -237,6 +237,8 @@ export const authService = {
 
   async forgotPassword(email: string): Promise<AuthResponse> {
     try {
+      console.log('🔑 Sending password reset request to backend...');
+      
       const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.AUTH}`, {
         method: 'POST',
         headers: {
@@ -250,6 +252,8 @@ export const authService = {
       });
 
       const result = await response.json();
+      console.log('📨 Password reset response:', result);
+      
       return result;
     } catch (error) {
       console.error('❌ Forgot password error:', error);
@@ -265,6 +269,8 @@ export const authService = {
 
   async resetPassword(email: string, otp: string, newPassword: string): Promise<AuthResponse> {
     try {
+      console.log('🔐 Resetting password via backend API...');
+      
       const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.AUTH}`, {
         method: 'POST',
         headers: {
@@ -280,6 +286,8 @@ export const authService = {
       });
 
       const result = await response.json();
+      console.log('🔄 Password reset response:', result);
+      
       return result;
     } catch (error) {
       console.error('❌ Reset password error:', error);
