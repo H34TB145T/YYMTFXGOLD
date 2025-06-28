@@ -51,6 +51,7 @@ php_value session.cookie_secure On
 php_value session.cookie_httponly On
 php_value session.use_only_cookies On
 php_value session.use_strict_mode On
+php_value session.cookie_samesite None
 
 # Prevent directory browsing
 Options -Indexes
