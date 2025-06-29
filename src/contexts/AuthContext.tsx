@@ -68,6 +68,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const restoreUserSession = () => {
     try {
+      // Check for PHP session cookie
+      const hasPHPSession = document.cookie.includes('PHPSESSID=');
+      
       // Check for token in localStorage (short-term session)
       const token = localStorage.getItem('token');
       
@@ -102,6 +105,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (currentUser) {
         console.log('✅ Session restored for user:', currentUser.email);
         setUser(currentUser);
+      } else if (hasPHPSession) {
+        // Try to restore from PHP session
+        console.log('🔍 Found PHP session, attempting to restore...');
+        // In a real app, you would make an API call to verify the session
+        // For now, we'll just log it
       } else {
         // Clear any invalid tokens
         localStorage.removeItem('token');
