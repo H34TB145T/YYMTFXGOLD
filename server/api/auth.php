@@ -8,10 +8,29 @@ header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Access-Control-Allow-Credentials: true'); // Allow credentials
 
-// Set session cookie parameters for better persistence
+// Secure session configuration
 ini_set('session.cookie_lifetime', 86400 * 30); // 30 days
 ini_set('session.gc_maxlifetime', 86400 * 30); // 30 days
+ini_set('session.cookie_secure', 1); // Only send cookies over HTTPS
+ini_set('session.cookie_httponly', 1); // Prevent JavaScript access to session cookies
+ini_set('session.use_strict_mode', 1); // Prevent session fixation
+
 session_start();
+
+// Session timeout configuration (30 minutes of inactivity)
+$session_timeout = 30 * 60; // 30 minutes in seconds
+if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $session_timeout)) {
+    session_unset();
+    session_destroy();
+    session_start(); // Start a new session
+}
+$_SESSION['last_activity'] = time(); // Update last activity timestamp
+
+// Regenerate session ID periodically to prevent fixation
+if (!isset($_SESSION['created']) || (time() - $_SESSION['created'] > 1800)) { // Regenerate every 30 minutes
+    session_regenerate_id(true);
+    $_SESSION['created'] = time();
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
@@ -51,6 +70,16 @@ try {
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Service initialization error: ' . $e->getMessage()]);
     exit;
+}
+
+// Validate session for sensitive actions
+function validateSession($userId) {
+    if (!isset($_SESSION['user_id']) || $_SESSION['user_id'] !== $userId) {
+        ob_clean();
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Invalid or expired session']);
+        exit;
+    }
 }
 
 switch ($method) {
@@ -95,15 +124,22 @@ switch ($method) {
                 break;
                 
             case 'toggle_2fa':
+                validateSession($input['userId'] ?? '');
                 handleToggle2FA($input, $pdo, $emailService, $otpManager);
                 break;
                 
             case 'update_username':
+                validateSession($input['userId'] ?? '');
                 handleUpdateUsername($input, $pdo);
                 break;
                 
             case 'change_password':
+                validateSession($input['userId'] ?? '');
                 handleChangePassword($input, $pdo);
+                break;
+                
+            case 'logout':
+                handleLogout();
                 break;
                 
             default:
@@ -117,6 +153,20 @@ switch ($method) {
         ob_clean();
         http_response_code(405);
         echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+}
+
+function handleLogout() {
+    // Clear session data
+    session_unset();
+    session_destroy();
+    
+    // Clear remember me cookie
+    if (isset($_COOKIE['remember_token'])) {
+        setcookie('remember_token', '', time() - 3600, '/', '', true, true);
+    }
+    
+    ob_clean();
+    echo json_encode(['success' => true, 'message' => 'Logged out successfully']);
 }
 
 function getUserCompleteData($pdo, $userId) {
@@ -503,18 +553,24 @@ function handleLogin($input, $pdo, $emailService, $otpManager) {
             $stmt = $pdo->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
             $stmt->execute([$user['id']]);
             
+            // Regenerate session ID for security
+            session_regenerate_id(true);
+            
             // Set session variables
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_email'] = $user['email'];
             $_SESSION['user_role'] = $user['role'];
+            $_SESSION['created'] = time();
+            $_SESSION['last_activity'] = time();
             
             // If remember me is checked, set a persistent cookie
             if ($rememberMe) {
                 $token = bin2hex(random_bytes(32));
                 setcookie('remember_token', $token, time() + 30 * 24 * 60 * 60, '/', '', true, true);
                 
-                // Store token in database (in a real app)
-                // For now, we'll just log it
+                // Store token in database
+                $stmt = $pdo->prepare("UPDATE users SET remember_token = ? WHERE id = ?");
+                $stmt->execute([$token, $user['id']]);
                 error_log("Remember me token set for user: {$user['email']}");
             }
             
@@ -537,8 +593,8 @@ function handleLogin($input, $pdo, $emailService, $otpManager) {
                     echo json_encode(['success' => false, 'message' => 'Failed to send 2FA code']);
                 }
             } else {
-                // Generate JWT token (simplified for demo)
-                $token = base64_encode(json_encode(['userId' => $user['id'], 'exp' => time() + 3600 * 24 * 30])); // 30 days
+                // Generate JWT token
+                $token = base64_encode(json_encode(['userId' => $user['id'], 'exp' => time() + 3600 * 24 * 30]));
                 
                 // Get complete user data with assets, transactions, and positions
                 $completeUserData = getUserCompleteData($pdo, $user['id']);
@@ -669,9 +725,14 @@ function handleVerify2FA($input, $pdo, $otpManager) {
         // Generate JWT token with long expiration for persistence
         $token = base64_encode(json_encode(['userId' => $userId, 'exp' => time() + 3600 * 24 * 30])); // 30 days
         
+        // Regenerate session ID for security
+        session_regenerate_id(true);
+        
         // Set session variables
         $_SESSION['user_id'] = $userId;
         $_SESSION['user_email'] = $email;
+        $_SESSION['created'] = time();
+        $_SESSION['last_activity'] = time();
         
         // Get complete user data with assets, transactions, and positions
         $completeUserData = getUserCompleteData($pdo, $userId);

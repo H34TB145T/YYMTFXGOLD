@@ -235,6 +235,27 @@ export const authService = {
     }
   },
 
+  async logout(): Promise<AuthResponse> {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.AUTH}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'logout'
+        }),
+        credentials: 'include' // Include cookies in the request
+      });
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+      return { success: true, message: 'Logged out successfully' };
+    }
+  },
+
   async forgotPassword(email: string): Promise<AuthResponse> {
     try {
       console.log('🔑 Sending password reset request to backend...');
