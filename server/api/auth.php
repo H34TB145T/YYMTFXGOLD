@@ -11,7 +11,7 @@ header('Access-Control-Allow-Credentials: true'); // Allow credentials
 // Secure session configuration
 ini_set('session.cookie_lifetime', 86400 * 30); // 30 days
 ini_set('session.gc_maxlifetime', 86400 * 30); // 30 days
-ini_set('session.cookie_secure', 1); // Only send cookies over HTTPS
+ini_set('session.cookie_secure', 0); // Set to 0 for development, 1 for production
 ini_set('session.cookie_httponly', 1); // Prevent JavaScript access to session cookies
 ini_set('session.use_strict_mode', 1); // Prevent session fixation
 
@@ -162,7 +162,7 @@ function handleLogout() {
     
     // Clear remember me cookie
     if (isset($_COOKIE['remember_token'])) {
-        setcookie('remember_token', '', time() - 3600, '/', '', true, true);
+        setcookie('remember_token', '', time() - 3600, '/', '', false, true);
     }
     
     ob_clean();
@@ -566,11 +566,13 @@ function handleLogin($input, $pdo, $emailService, $otpManager) {
             // If remember me is checked, set a persistent cookie
             if ($rememberMe) {
                 $token = bin2hex(random_bytes(32));
-                setcookie('remember_token', $token, time() + 30 * 24 * 60 * 60, '/', '', true, true);
+                setcookie('remember_token', $token, time() + 30 * 24 * 60 * 60, '/', '', false, true);
                 
                 // Store token in database
                 $stmt = $pdo->prepare("UPDATE users SET remember_token = ? WHERE id = ?");
-                $stmt->execute([$token, $user['id']]);
+                if ($stmt) {
+                    $stmt->execute([$token, $user['id']]);
+                }
                 error_log("Remember me token set for user: {$user['email']}");
             }
             
