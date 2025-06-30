@@ -595,8 +595,8 @@ function handleLogin($input, $pdo, $emailService, $otpManager) {
                     echo json_encode(['success' => false, 'message' => 'Failed to send 2FA code']);
                 }
             } else {
-                // Generate JWT token
-                $token = base64_encode(json_encode(['userId' => $user['id'], 'exp' => time() + 3600 * 24 * 30]));
+                // Generate JWT token with long expiration for persistence
+                $token = base64_encode(json_encode(['userId' => $user['id'], 'exp' => time() + 3600 * 24 * 30])); // 30 days
                 
                 // Get complete user data with assets, transactions, and positions
                 $completeUserData = getUserCompleteData($pdo, $user['id']);
