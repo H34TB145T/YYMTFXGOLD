@@ -8,7 +8,7 @@ header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Access-Control-Allow-Credentials: true'); // Allow credentials
 
-// Secure session configuration
+// Set session cookie parameters for better persistence
 ini_set('session.cookie_lifetime', 86400 * 30); // 30 days
 ini_set('session.gc_maxlifetime', 86400 * 30); // 30 days
 ini_set('session.cookie_secure', 0); // Set to 0 for development, 1 for production

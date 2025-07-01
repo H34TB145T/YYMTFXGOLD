@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import TwoFactorAuth from './TwoFactorAuth';
 import ForgotPasswordModal from './ForgotPasswordModal';
@@ -7,6 +7,8 @@ import { Wallet, AlertCircle, CheckCircle, Eye, EyeOff, Mail, Lock, Key, Refresh
 
 const Login: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const from = (location.state as any)?.from || '/dashboard';
   const verified = searchParams.get('verified');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,9 +25,9 @@ const Login: React.FC = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/dashboard');
+      navigate(from);
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, from]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,7 +56,7 @@ const Login: React.FC = () => {
         setTwoFAUserId(result.userId);
         setShow2FA(true);
       } else {
-        navigate('/dashboard');
+        navigate(from);
       }
     } else {
       if (result.requiresVerification) {
@@ -73,7 +75,7 @@ const Login: React.FC = () => {
 
   const handle2FASuccess = () => {
     setShow2FA(false);
-    navigate('/dashboard');
+    navigate(from);
   };
 
   const handle2FACancel = () => {
