@@ -8,7 +8,7 @@
  * - Old login attempts
  * 
  * Recommended cron schedule: Once per hour
- * Example cron entry: 0 * * * * php /path/to/public_html/cleanup_expired_tokens.php
+ * Example cron entry: 0 * * * * php /home/zpjhpszw/public_html/cleanup_expired_tokens.php
  */
 
 // Load database configuration
