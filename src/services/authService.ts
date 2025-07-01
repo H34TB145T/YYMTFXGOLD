@@ -109,7 +109,7 @@ export const authService = {
     }
   },
 
-  async login(email: string, password: string): Promise<AuthResponse> {
+  async login(email: string, password: string, rememberMe: boolean = false): Promise<AuthResponse> {
     try {
       console.log('🔐 Calling backend login API...');
       
@@ -121,7 +121,8 @@ export const authService = {
         body: JSON.stringify({
           action: 'login',
           email,
-          password
+          password,
+          rememberMe
         }),
         credentials: 'include' // Include cookies in the request
       });
@@ -293,6 +294,25 @@ export const authService = {
       return {
         success: false,
         message: 'Failed to change password. Please try again.'
+      };
+    }
+  },
+  
+  // Check if user is authenticated via PHP session
+  async checkSession(): Promise<AuthResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth.php?check_session=1`, {
+        method: 'GET',
+        credentials: 'include' // Include cookies in the request
+      });
+      
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('❌ Session check error:', error);
+      return {
+        success: false,
+        message: 'Failed to check session'
       };
     }
   }

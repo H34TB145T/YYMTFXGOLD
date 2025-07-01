@@ -8,7 +8,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; message: string; requires2FA?: boolean; userId?: string; requiresVerification?: boolean }>;
-  register: (email: string, password: string, fullName: string, phone: string) => Promise<{ success: boolean; message: string; requiresVerification?: boolean }>;
+  register: (email: string, password: string, username: string, fullName: string) => Promise<{ success: boolean; message: string; requiresVerification?: boolean }>;
   logout: () => void;
   updateUser: (updatedUser: User) => void;
 }
@@ -68,6 +68,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const restoreUserSession = () => {
     try {
+      // First check PHP session
+      const phpSessionId = document.cookie.match(/PHPSESSID=([^;]+)/);
+      if (phpSessionId) {
+        console.log('✅ PHP Session found:', phpSessionId[1]);
+      }
+      
       // Check for token in localStorage (short-term session)
       const token = localStorage.getItem('token');
       
@@ -118,7 +124,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string, rememberMe = false) => {
     try {
       // Use backend API for login
-      const result = await authService.login(email, password);
+      const result = await authService.login(email, password, rememberMe);
       
       if (result.success && result.token && result.user) {
         // Store token in localStorage (current session)
@@ -168,10 +174,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const register = async (email: string, password: string, fullName: string, phone: string) => {
+  const register = async (email: string, password: string, username: string, fullName: string) => {
     try {
       // 🚀 USE BACKEND API INSTEAD OF LOCALSTORAGE
-      const result = await authService.register(email, password, fullName, fullName);
+      const result = await authService.register(email, password, username, fullName);
       
       if (result.success) {
         // Also save to localStorage for compatibility
@@ -181,7 +187,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           id: result.userId || uuidv4(),
           email,
           full_name: fullName,
-          phone,
+          phone: '',
           role: 'user',
           is_verified: false,
           balance: 0, // NO default balance for new users
@@ -190,7 +196,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           assets: [],
           transactions: [],
           positions: [],
-          username: fullName.toLowerCase().replace(/\s+/g, ''),
+          username: username,
           twoFactorEnabled: false
         };
         
@@ -210,6 +216,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.removeItem('token');
     sessionStorage.removeItem('token');
     localStorage.removeItem('persistentToken');
+    
+    // Clear PHP session
+    document.cookie = "PHPSESSID=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    
     setUser(null);
   };
 

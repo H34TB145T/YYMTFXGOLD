@@ -10,12 +10,12 @@ class EmailConfig {
     // Gmail SMTP Configuration (Working Configuration)
     const SMTP_HOST = 'smtp.gmail.com';
     const SMTP_PORT = 465; // Using 465 for SMTPS (SSL)
-    const SMTP_USERNAME = 'fxgold.info@gmail.com';
-    const SMTP_PASSWORD = 'svlwypaqdqlvvzqz'; // Gmail App Password
+    const SMTP_USERNAME = 'yeyint.jobs@gmail.com'; // Updated with your working email
+    const SMTP_PASSWORD = 'jucfeztwwpwyvvrq'; // Updated with your working app password
     const SMTP_ENCRYPTION = 'ssl'; // Using SSL instead of TLS
     
     // Email settings - Updated with your domain
-    const FROM_EMAIL = 'fxgold.info@gmail.com';
+    const FROM_EMAIL = 'yeyint.jobs@gmail.com';
     const FROM_NAME = 'FXGold Support';
     const REPLY_TO = 'support@fxgold.shop';
     
