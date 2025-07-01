@@ -35,7 +35,7 @@ try {
     $userId = 'test-' . uniqid();
     $hashedPassword = password_hash('testpass123', PASSWORD_DEFAULT);
     
-    $stmt = $pdo->prepare("INSERT INTO users (id, username, email, password, full_name, is_verified, balance, usdt_balance, margin_balance) VALUES (?, ?, ?, ?, ?, 0, 1000, 0, 0)");
+    $stmt = $pdo->prepare("INSERT INTO users (id, username, email, password, full_name, is_verified, balance, usdt_balance, margin_balance) VALUES (?, ?, ?, ?, ?, 0, 0, 0, 0)");
     $result = $stmt->execute([$userId, $testUsername, $testEmail, $hashedPassword, 'Test Connection User']);
     
     if ($result) {
@@ -77,10 +77,9 @@ echo "</div>";
 echo "<div style='background: #fff3cd; color: #856404; padding: 15px; border-radius: 5px; margin: 10px 0;'>";
 echo "<h3>🧪 Next Steps:</h3>";
 echo "<ol>";
-echo "<li>Upload the fixed <code>config/database.php</code> file</li>";
 echo "<li>Test registration: <a href='https://fxgold.shop/register'>https://fxgold.shop/register</a></li>";
-echo "<li>Use email: <strong>rikishoyo@gmail.com</strong></li>";
-echo "<li>Check Gmail inbox for OTP email</li>";
+echo "<li>Use email: <strong>test@example.com</strong></li>";
+echo "<li>Check for successful registration</li>";
 echo "</ol>";
 echo "</div>";
 ?>

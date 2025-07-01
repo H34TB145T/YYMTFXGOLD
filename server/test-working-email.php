@@ -18,13 +18,13 @@ echo "<p><strong>Generated OTP:</strong> $testOTP</p>";
 echo "<h3>📧 Testing Verification Email</h3>";
 
 try {
-    $result = $emailService->sendVerificationEmail('yeminthanriki@gmail.com', 'Test User', $testOTP);
+    $result = $emailService->sendVerificationEmail('test@example.com', 'Test User', $testOTP);
     
     if ($result) {
         echo "<div style='background: #d4edda; color: #155724; padding: 15px; border-radius: 5px; margin: 10px 0;'>";
         echo "<h3>✅ SUCCESS: Verification Email Sent!</h3>";
         echo "<p>✅ Email sent successfully using updated EmailService!</p>";
-        echo "<p>✅ Check your inbox: yeminthanriki@gmail.com</p>";
+        echo "<p>✅ Check your inbox: test@example.com</p>";
         echo "<p>✅ OTP Code: <strong>$testOTP</strong></p>";
         echo "</div>";
     } else {
@@ -44,12 +44,12 @@ echo "<hr>";
 echo "<div style='background: #e2e3e5; color: #383d41; padding: 15px; border-radius: 5px; margin: 10px 0;'>";
 echo "<h3>📋 Updated Configuration Summary:</h3>";
 echo "<ul>";
-echo "<li><strong>📧 Gmail Account:</strong> fxgold.info@gmail.com</li>";
-echo "<li><strong>🔐 Gmail App Password:</strong> svlwypaqdqlvvzqz</li>";
+echo "<li><strong>📧 Gmail Account:</strong> yeyint.jobs@gmail.com</li>";
+echo "<li><strong>🔐 Gmail App Password:</strong> jucfeztwwpwyvvrq</li>";
 echo "<li><strong>🌐 Host:</strong> smtp.gmail.com</li>";
 echo "<li><strong>🔌 Port:</strong> 465 (SSL/SMTPS)</li>";
 echo "<li><strong>🔒 Encryption:</strong> SSL (SMTPS)</li>";
-echo "<li><strong>📤 From:</strong> fxgold.info@gmail.com (FXGold Support)</li>";
+echo "<li><strong>📤 From:</strong> yeyint.jobs@gmail.com (FXGold Support)</li>";
 echo "<li><strong>📧 Reply-To:</strong> support@fxgold.shop</li>";
 echo "</ul>";
 echo "</div>";
