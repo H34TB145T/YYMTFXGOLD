@@ -5,11 +5,12 @@ import { Shield, AlertCircle, CheckCircle, RefreshCw, Mail, Clock } from 'lucide
 interface TwoFactorAuthProps {
   email: string;
   userId: string;
+  rememberMe?: boolean;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ email, userId, onSuccess, onCancel }) => {
+const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ email, userId, rememberMe = false, onSuccess, onCancel }) => {
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
@@ -49,7 +50,7 @@ const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ email, userId, onSuccess,
     }
 
     try {
-      const result = await authService.verify2FA(email, otp, userId);
+      const result = await authService.verify2FA(email, otp, userId, rememberMe);
       
       if (result.success) {
         if (result.token && result.user) {
@@ -72,12 +73,19 @@ const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ email, userId, onSuccess,
   const handleResendOTP = async () => {
     setResending(true);
     setError('');
+    setSuccess('');
     
     try {
       // In a real implementation, you would have a resend 2FA endpoint
-      setSuccess('New 2FA code sent to your email');
-      setTimeLeft(300); // Reset timer
-      setTimeout(() => setSuccess(''), 3000);
+      const result = await authService.send2FA({ email, userName: email.split('@')[0] });
+      
+      if (result.success) {
+        setSuccess('New 2FA code sent to your email');
+        setTimeLeft(300); // Reset timer
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(result.message);
+      }
     } catch (error) {
       setError('Failed to resend 2FA code');
     }

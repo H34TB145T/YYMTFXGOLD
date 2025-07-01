@@ -11,6 +11,14 @@ header('Access-Control-Allow-Credentials: true'); // Allow credentials
 // Set session cookie parameters for better persistence
 ini_set('session.cookie_lifetime', 86400 * 30); // 30 days
 ini_set('session.gc_maxlifetime', 86400 * 30); // 30 days
+ini_set('session.use_strict_mode', 1);
+ini_set('session.use_cookies', 1);
+ini_set('session.use_only_cookies', 1);
+ini_set('session.cookie_httponly', 1);
+ini_set('session.cookie_secure', 1);
+ini_set('session.cookie_samesite', 'Strict');
+
+// Start session for all requests
 session_start();
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -52,10 +60,56 @@ if ($method === 'GET' && isset($_GET['check_session'])) {
                 'user' => $userData
             ]);
         } else {
+            // Try to restore session from remember token
+            $rememberToken = getRememberTokenFromCookie();
+            if ($rememberToken) {
+                $userId = validateRememberToken($pdo, $rememberToken);
+                if ($userId) {
+                    // Valid remember token, restore session
+                    $_SESSION['user_id'] = $userId;
+                    $_SESSION['user_email'] = getUserEmailById($pdo, $userId);
+                    
+                    $userData = getUserCompleteData($pdo, $userId);
+                    if ($userData) {
+                        ob_clean();
+                        echo json_encode([
+                            'success' => true,
+                            'message' => 'Session restored from remember token',
+                            'user' => $userData
+                        ]);
+                        exit;
+                    }
+                }
+            }
+            
+            // Invalid session
             ob_clean();
+            session_destroy();
             echo json_encode(['success' => false, 'message' => 'Invalid session']);
         }
     } else {
+        // Try to restore session from remember token
+        $rememberToken = getRememberTokenFromCookie();
+        if ($rememberToken) {
+            $userId = validateRememberToken($pdo, $rememberToken);
+            if ($userId) {
+                // Valid remember token, restore session
+                $_SESSION['user_id'] = $userId;
+                $_SESSION['user_email'] = getUserEmailById($pdo, $userId);
+                
+                $userData = getUserCompleteData($pdo, $userId);
+                if ($userData) {
+                    ob_clean();
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Session restored from remember token',
+                        'user' => $userData
+                    ]);
+                    exit;
+                }
+            }
+        }
+        
         ob_clean();
         echo json_encode(['success' => false, 'message' => 'No active session']);
     }
@@ -76,6 +130,22 @@ try {
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Service initialization error: ' . $e->getMessage()]);
     exit;
+}
+
+// Rate limiting for sensitive endpoints
+if (in_array($input['action'] ?? '', ['login', 'forgot_password'])) {
+    $ip = $_SERVER['REMOTE_ADDR'];
+    $action = $input['action'];
+    
+    if (isRateLimited($pdo, $ip, $action)) {
+        ob_clean();
+        http_response_code(429);
+        echo json_encode(['success' => false, 'message' => 'Too many attempts. Please try again later.']);
+        exit;
+    }
+    
+    // Record this attempt
+    recordAttempt($pdo, $ip, $action);
 }
 
 switch ($method) {
@@ -101,6 +171,10 @@ switch ($method) {
                 
             case 'login':
                 handleLogin($input, $pdo, $emailService, $otpManager);
+                break;
+                
+            case 'logout':
+                handleLogout($pdo);
                 break;
                 
             case 'forgot_password':
@@ -142,6 +216,143 @@ switch ($method) {
         ob_clean();
         http_response_code(405);
         echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+}
+
+// Rate limiting functions
+function isRateLimited($pdo, $ip, $action) {
+    try {
+        // Check if IP has too many attempts in the last hour
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM login_attempts WHERE ip_address = ? AND action = ? AND attempt_time > DATE_SUB(NOW(), INTERVAL 1 HOUR)");
+        $stmt->execute([$ip, $action]);
+        $count = $stmt->fetchColumn();
+        
+        $limit = ($action === 'login') ? 10 : 5; // 10 login attempts, 5 password reset attempts per hour
+        return $count >= $limit;
+    } catch (Exception $e) {
+        error_log("Rate limiting error: " . $e->getMessage());
+        return false; // Don't block on error
+    }
+}
+
+function recordAttempt($pdo, $ip, $action) {
+    try {
+        // Create table if not exists
+        $pdo->exec("CREATE TABLE IF NOT EXISTS login_attempts (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            ip_address VARCHAR(45) NOT NULL,
+            action VARCHAR(20) NOT NULL,
+            attempt_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX (ip_address, action, attempt_time)
+        )");
+        
+        // Record this attempt
+        $stmt = $pdo->prepare("INSERT INTO login_attempts (ip_address, action) VALUES (?, ?)");
+        $stmt->execute([$ip, $action]);
+    } catch (Exception $e) {
+        error_log("Record attempt error: " . $e->getMessage());
+    }
+}
+
+// Remember token functions
+function createRememberToken($pdo, $userId, $expiresInDays = 30) {
+    try {
+        // Create table if not exists
+        $pdo->exec("CREATE TABLE IF NOT EXISTS remember_tokens (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id VARCHAR(36) NOT NULL,
+            token VARCHAR(255) NOT NULL,
+            selector VARCHAR(16) NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX (user_id),
+            INDEX (selector),
+            INDEX (expires_at),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )");
+        
+        // Generate a secure token
+        $selector = bin2hex(random_bytes(8));
+        $validator = bin2hex(random_bytes(32));
+        
+        // Store hashed token in database
+        $hashedValidator = password_hash($validator, PASSWORD_DEFAULT);
+        $expiresAt = date('Y-m-d H:i:s', time() + (86400 * $expiresInDays));
+        
+        // Remove any existing tokens for this user
+        $stmt = $pdo->prepare("DELETE FROM remember_tokens WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        
+        // Insert new token
+        $stmt = $pdo->prepare("INSERT INTO remember_tokens (user_id, token, selector, expires_at) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$userId, $hashedValidator, $selector, $expiresAt]);
+        
+        // Return the token to be stored in cookie
+        return $selector . ':' . $validator;
+    } catch (Exception $e) {
+        error_log("Create remember token error: " . $e->getMessage());
+        return null;
+    }
+}
+
+function validateRememberToken($pdo, $tokenCookie) {
+    try {
+        // Split the cookie value
+        $parts = explode(':', $tokenCookie);
+        if (count($parts) !== 2) {
+            return null;
+        }
+        
+        list($selector, $validator) = $parts;
+        
+        // Find token in database
+        $stmt = $pdo->prepare("SELECT user_id, token, expires_at FROM remember_tokens WHERE selector = ? AND expires_at > NOW()");
+        $stmt->execute([$selector]);
+        $token = $stmt->fetch();
+        
+        if (!$token) {
+            return null;
+        }
+        
+        // Verify the validator
+        if (password_verify($validator, $token['token'])) {
+            // Token is valid, return user ID
+            return $token['user_id'];
+        }
+        
+        return null;
+    } catch (Exception $e) {
+        error_log("Validate remember token error: " . $e->getMessage());
+        return null;
+    }
+}
+
+function getRememberTokenFromCookie() {
+    return isset($_COOKIE['remember_token']) ? $_COOKIE['remember_token'] : null;
+}
+
+function clearRememberToken($pdo, $userId) {
+    try {
+        // Remove token from database
+        $stmt = $pdo->prepare("DELETE FROM remember_tokens WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        
+        // Clear cookie
+        setcookie('remember_token', '', time() - 3600, '/', '', true, true);
+    } catch (Exception $e) {
+        error_log("Clear remember token error: " . $e->getMessage());
+    }
+}
+
+function getUserEmailById($pdo, $userId) {
+    try {
+        $stmt = $pdo->prepare("SELECT email FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $result = $stmt->fetch();
+        return $result ? $result['email'] : null;
+    } catch (Exception $e) {
+        error_log("Get user email error: " . $e->getMessage());
+        return null;
+    }
 }
 
 function getUserCompleteData($pdo, $userId) {
@@ -535,12 +746,23 @@ function handleLogin($input, $pdo, $emailService, $otpManager) {
             
             // If remember me is checked, set a persistent cookie
             if ($rememberMe) {
-                $token = bin2hex(random_bytes(32));
-                setcookie('remember_token', $token, time() + 30 * 24 * 60 * 60, '/', '', true, true);
-                
-                // Store token in database (in a real app)
-                // For now, we'll just log it
-                error_log("Remember me token set for user: {$user['email']}");
+                $token = createRememberToken($pdo, $user['id']);
+                if ($token) {
+                    // Set secure cookie with 30 day expiration
+                    setcookie(
+                        'remember_token',
+                        $token,
+                        [
+                            'expires' => time() + (86400 * 30),
+                            'path' => '/',
+                            'domain' => '',
+                            'secure' => true,
+                            'httponly' => true,
+                            'samesite' => 'Strict'
+                        ]
+                    );
+                    error_log("Remember me token set for user: {$user['email']}");
+                }
             }
             
             // Check if 2FA is enabled
@@ -593,6 +815,23 @@ function handleLogin($input, $pdo, $emailService, $otpManager) {
         http_response_code(500);
         echo json_encode(['success' => false, 'message' => 'Login failed: ' . $e->getMessage()]);
     }
+}
+
+function handleLogout($pdo) {
+    // Clear PHP session
+    session_unset();
+    session_destroy();
+    
+    // Clear remember token if exists
+    if (isset($_SESSION['user_id'])) {
+        clearRememberToken($pdo, $_SESSION['user_id']);
+    }
+    
+    // Clear remember token cookie
+    setcookie('remember_token', '', time() - 3600, '/', '', true, true);
+    
+    ob_clean();
+    echo json_encode(['success' => true, 'message' => 'Logged out successfully']);
 }
 
 function handleForgotPassword($input, $pdo, $emailService, $otpManager) {
@@ -662,6 +901,17 @@ function handleResetPassword($input, $pdo, $otpManager) {
         
         if ($stmt->execute([$hashedPassword, $email])) {
             error_log("Password reset successful for email: $email");
+            
+            // Get user ID
+            $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+            $stmt->execute([$email]);
+            $user = $stmt->fetch();
+            
+            if ($user) {
+                // Clear any remember tokens for this user
+                clearRememberToken($pdo, $user['id']);
+            }
+            
             ob_clean();
             echo json_encode(['success' => true, 'message' => 'Password reset successfully']);
         } else {
@@ -682,6 +932,7 @@ function handleVerify2FA($input, $pdo, $otpManager) {
     $email = $input['email'] ?? '';
     $otp = $input['otp'] ?? '';
     $userId = $input['userId'] ?? '';
+    $rememberMe = $input['rememberMe'] ?? false;
     
     if (empty($email) || empty($otp) || empty($userId)) {
         ob_clean();
@@ -691,12 +942,41 @@ function handleVerify2FA($input, $pdo, $otpManager) {
     }
     
     if ($otpManager->verifyOTP($email, $otp, '2fa')) {
-        // Generate JWT token with long expiration for persistence
-        $token = base64_encode(json_encode(['userId' => $userId, 'exp' => time() + 3600 * 24 * 30])); // 30 days
-        
         // Set session variables
         $_SESSION['user_id'] = $userId;
         $_SESSION['user_email'] = $email;
+        
+        // Get user role
+        $stmt = $pdo->prepare("SELECT role FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch();
+        if ($user) {
+            $_SESSION['user_role'] = $user['role'];
+        }
+        
+        // If remember me is checked, set a persistent cookie
+        if ($rememberMe) {
+            $token = createRememberToken($pdo, $userId);
+            if ($token) {
+                // Set secure cookie with 30 day expiration
+                setcookie(
+                    'remember_token',
+                    $token,
+                    [
+                        'expires' => time() + (86400 * 30),
+                        'path' => '/',
+                        'domain' => '',
+                        'secure' => true,
+                        'httponly' => true,
+                        'samesite' => 'Strict'
+                    ]
+                );
+                error_log("Remember me token set after 2FA for user ID: $userId");
+            }
+        }
+        
+        // Generate JWT token with long expiration for persistence
+        $token = base64_encode(json_encode(['userId' => $userId, 'exp' => time() + 3600 * 24 * 30])); // 30 days
         
         // Get complete user data with assets, transactions, and positions
         $completeUserData = getUserCompleteData($pdo, $userId);
@@ -868,6 +1148,9 @@ function handleChangePassword($input, $pdo) {
         $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
         
         if ($stmt->execute([$hashedPassword, $userId])) {
+            // Clear any remember tokens for this user
+            clearRememberToken($pdo, $userId);
+            
             ob_clean();
             echo json_encode(['success' => true, 'message' => 'Password changed successfully']);
         } else {
@@ -892,4 +1175,25 @@ function generateUUID() {
         mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
     );
 }
-?>
+
+// Cleanup expired tokens (run this periodically via cron)
+function cleanupExpiredTokens($pdo) {
+    try {
+        // Delete expired remember tokens
+        $stmt = $pdo->prepare("DELETE FROM remember_tokens WHERE expires_at < NOW()");
+        $stmt->execute();
+        
+        // Delete expired OTP codes
+        $stmt = $pdo->prepare("DELETE FROM otp_codes WHERE expires_at < NOW()");
+        $stmt->execute();
+        
+        // Delete old login attempts (older than 24 hours)
+        $stmt = $pdo->prepare("DELETE FROM login_attempts WHERE attempt_time < DATE_SUB(NOW(), INTERVAL 24 HOUR)");
+        $stmt->execute();
+        
+        return true;
+    } catch (Exception $e) {
+        error_log("Cleanup error: " . $e->getMessage());
+        return false;
+    }
+}

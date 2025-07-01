@@ -139,6 +139,30 @@ export const authService = {
       };
     }
   },
+  
+  async logout(): Promise<AuthResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth.php`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'logout'
+        }),
+        credentials: 'include' // Include cookies in the request
+      });
+      
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+      return {
+        success: false,
+        message: 'Logout failed. Please try again.'
+      };
+    }
+  },
 
   async forgotPassword(email: string): Promise<AuthResponse> {
     try {
@@ -192,7 +216,7 @@ export const authService = {
     }
   },
 
-  async verify2FA(email: string, otp: string, userId: string): Promise<AuthResponse> {
+  async verify2FA(email: string, otp: string, userId: string, rememberMe: boolean = false): Promise<AuthResponse> {
     try {
       const response = await fetch(`${API_BASE_URL}/auth.php`, {
         method: 'POST',
@@ -203,7 +227,8 @@ export const authService = {
           action: 'verify_2fa',
           email,
           otp,
-          userId
+          userId,
+          rememberMe
         }),
         credentials: 'include' // Include cookies in the request
       });

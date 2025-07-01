@@ -234,6 +234,7 @@ const Login: React.FC = () => {
         <TwoFactorAuth
           email={email}
           userId={twoFAUserId}
+          rememberMe={rememberMe}
           onSuccess={handle2FASuccess}
           onCancel={handle2FACancel}
         />

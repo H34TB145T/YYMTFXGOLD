@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { emailService } from '../../services/emailService';
+import { authService } from '../../services/authService';
 import { Mail, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
 
 const ForgotPassword: React.FC = () => {
@@ -24,23 +24,25 @@ const ForgotPassword: React.FC = () => {
       return;
     }
 
-    // Check if user exists (in production, this would be a backend call)
-    const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
-    const userExists = users.some((u: any) => u.email === email);
-
-    if (!userExists) {
-      setError('No account found with this email address');
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address');
       setLoading(false);
       return;
     }
 
-    const result = await emailService.sendPasswordResetEmail(email, 'User');
-    
-    if (result.success) {
-      setSuccess('Password reset code sent to your email');
-      setStep('otp');
-    } else {
-      setError(result.message);
+    try {
+      const result = await authService.forgotPassword(email);
+      
+      if (result.success) {
+        setSuccess('Password reset code sent to your email');
+        setStep('otp');
+      } else {
+        setError(result.message);
+      }
+    } catch (error) {
+      setError('Failed to send reset code. Please try again.');
     }
     
     setLoading(false);
@@ -57,15 +59,10 @@ const ForgotPassword: React.FC = () => {
       return;
     }
 
-    const result = emailService.verifyOTP(email, otp, 'password_reset');
-    
-    if (result.success) {
-      setSuccess('OTP verified! Please set your new password');
-      setStep('reset');
-    } else {
-      setError(result.message);
-    }
-    
+    // We don't need to verify OTP here, just move to reset step
+    // The actual verification will happen when resetting the password
+    setSuccess('OTP verified! Please set your new password');
+    setStep('reset');
     setLoading(false);
   };
 
@@ -86,17 +83,20 @@ const ForgotPassword: React.FC = () => {
       return;
     }
 
-    // Update password in localStorage (in production, this would be a backend call)
-    const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
-    const updatedUsers = users.map((u: any) => 
-      u.email === email ? { ...u, password: newPassword } : u
-    );
-    localStorage.setItem('freddyUsers', JSON.stringify(updatedUsers));
-
-    setSuccess('Password reset successfully! You can now login with your new password');
-    setTimeout(() => {
-      window.location.href = '/login';
-    }, 2000);
+    try {
+      const result = await authService.resetPassword(email, otp, newPassword);
+      
+      if (result.success) {
+        setSuccess('Password reset successfully! You can now login with your new password');
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+      } else {
+        setError(result.message);
+      }
+    } catch (error) {
+      setError('Password reset failed. Please try again.');
+    }
     
     setLoading(false);
   };

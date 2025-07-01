@@ -246,6 +246,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     document.cookie = "PHPSESSID=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     
     setUser(null);
+    
+    // Call logout API endpoint
+    authService.logout().catch(error => {
+      console.error('Logout error:', error);
+    });
   };
 
   const updateUser = (updatedUser: User) => {

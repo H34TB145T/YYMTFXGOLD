@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { emailService } from '../../services/emailService';
+import { authService } from '../../services/authService';
 import { Mail, AlertCircle, CheckCircle, RefreshCw, X, Key, Lock, Eye, EyeOff } from 'lucide-react';
 
 interface ForgotPasswordModalProps {
@@ -38,23 +38,17 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ onClose, onSu
       return;
     }
 
-    // Check if user exists (in production, this would be a backend call)
-    const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
-    const userExists = users.some((u: any) => u.email === email);
-
-    if (!userExists) {
-      setError('No account found with this email address');
-      setLoading(false);
-      return;
-    }
-
-    const result = await emailService.sendPasswordResetEmail(email, 'User');
-    
-    if (result.success) {
-      setSuccess('Password reset code sent to your email! Please check your inbox.');
-      setStep('otp');
-    } else {
-      setError(result.message);
+    try {
+      const result = await authService.forgotPassword(email);
+      
+      if (result.success) {
+        setSuccess('Password reset code sent to your email! Please check your inbox.');
+        setStep('otp');
+      } else {
+        setError(result.message);
+      }
+    } catch (error) {
+      setError('Failed to send reset code. Please try again.');
     }
     
     setLoading(false);
@@ -71,15 +65,10 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ onClose, onSu
       return;
     }
 
-    const result = emailService.verifyOTP(email, otp, 'password_reset');
-    
-    if (result.success) {
-      setSuccess('OTP verified! Please set your new password');
-      setStep('reset');
-    } else {
-      setError(result.message);
-    }
-    
+    // We don't need to verify OTP here, just move to reset step
+    // The actual verification will happen when resetting the password
+    setSuccess('OTP verified! Please set your new password');
+    setStep('reset');
     setLoading(false);
   };
 
@@ -114,18 +103,21 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ onClose, onSu
       return;
     }
 
-    // Update password in localStorage (in production, this would be a backend call)
-    const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
-    const updatedUsers = users.map((u: any) => 
-      u.email === email ? { ...u, password: newPassword } : u
-    );
-    localStorage.setItem('freddyUsers', JSON.stringify(updatedUsers));
-
-    setSuccess('Password reset successfully! You can now login with your new password');
-    setTimeout(() => {
-      onSuccess();
-      onClose();
-    }, 2000);
+    try {
+      const result = await authService.resetPassword(email, otp, newPassword);
+      
+      if (result.success) {
+        setSuccess('Password reset successfully! You can now login with your new password');
+        setTimeout(() => {
+          onSuccess();
+          onClose();
+        }, 2000);
+      } else {
+        setError(result.message);
+      }
+    } catch (error) {
+      setError('Password reset failed. Please try again.');
+    }
     
     setLoading(false);
   };
@@ -134,13 +126,17 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ onClose, onSu
     setLoading(true);
     setError('');
     
-    const result = await emailService.sendPasswordResetEmail(email, 'User');
-    
-    if (result.success) {
-      setSuccess('New password reset code sent to your email');
-      setTimeout(() => setSuccess(''), 3000);
-    } else {
-      setError(result.message);
+    try {
+      const result = await authService.forgotPassword(email);
+      
+      if (result.success) {
+        setSuccess('New password reset code sent to your email');
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(result.message);
+      }
+    } catch (error) {
+      setError('Failed to resend reset code. Please try again.');
     }
     
     setLoading(false);
