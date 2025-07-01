@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { authService } from '../../services/authService';
+import { emailService } from '../../services/emailService';
 import { Mail, AlertCircle, CheckCircle, RefreshCw, X, Key, Lock, Eye, EyeOff } from 'lucide-react';
 
 interface ForgotPasswordModalProps {
@@ -39,7 +39,7 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ onClose, onSu
     }
 
     // Check if user exists (in production, this would be a backend call)
-    const users = JSON.parse(localStorage.getItem('fxgoldUsers') || '[]');
+    const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
     const userExists = users.some((u: any) => u.email === email);
 
     if (!userExists) {
@@ -48,18 +48,13 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ onClose, onSu
       return;
     }
 
-    try {
-      const result = await authService.forgotPassword(email);
-      
-      if (result.success) {
-        setSuccess('Password reset code sent to your email! Please check your inbox.');
-        setStep('otp');
-      } else {
-        setError(result.message || 'Failed to send reset code. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error sending reset code:', error);
-      setError('An unexpected error occurred. Please try again.');
+    const result = await emailService.sendPasswordResetEmail(email, 'User');
+    
+    if (result.success) {
+      setSuccess('Password reset code sent to your email! Please check your inbox.');
+      setStep('otp');
+    } else {
+      setError(result.message);
     }
     
     setLoading(false);
@@ -76,10 +71,15 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ onClose, onSu
       return;
     }
 
-    // In a real app, this would verify the OTP with the backend
-    // For now, we'll just proceed to the reset step
-    setSuccess('OTP verified! Please set your new password');
-    setStep('reset');
+    const result = emailService.verifyOTP(email, otp, 'password_reset');
+    
+    if (result.success) {
+      setSuccess('OTP verified! Please set your new password');
+      setStep('reset');
+    } else {
+      setError(result.message);
+    }
+    
     setLoading(false);
   };
 
@@ -114,31 +114,18 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ onClose, onSu
       return;
     }
 
-    try {
-      // Call the backend API to reset the password
-      const result = await authService.resetPassword(email, otp, newPassword);
-      
-      if (result.success) {
-        setSuccess('Password reset successfully! You can now login with your new password');
-        
-        // Also update the password in localStorage for local development/testing
-        const users = JSON.parse(localStorage.getItem('fxgoldUsers') || '[]');
-        const updatedUsers = users.map((u: any) => 
-          u.email === email ? { ...u, password: newPassword } : u
-        );
-        localStorage.setItem('fxgoldUsers', JSON.stringify(updatedUsers));
-        
-        setTimeout(() => {
-          onSuccess();
-          onClose();
-        }, 2000);
-      } else {
-        setError(result.message || 'Failed to reset password. Please try again.');
-      }
-    } catch (error) {
-      console.error('Password reset error:', error);
-      setError('An unexpected error occurred. Please try again.');
-    }
+    // Update password in localStorage (in production, this would be a backend call)
+    const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
+    const updatedUsers = users.map((u: any) => 
+      u.email === email ? { ...u, password: newPassword } : u
+    );
+    localStorage.setItem('freddyUsers', JSON.stringify(updatedUsers));
+
+    setSuccess('Password reset successfully! You can now login with your new password');
+    setTimeout(() => {
+      onSuccess();
+      onClose();
+    }, 2000);
     
     setLoading(false);
   };
@@ -147,18 +134,13 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ onClose, onSu
     setLoading(true);
     setError('');
     
-    try {
-      const result = await authService.forgotPassword(email);
-      
-      if (result.success) {
-        setSuccess('New password reset code sent to your email');
-        setTimeout(() => setSuccess(''), 3000);
-      } else {
-        setError(result.message || 'Failed to resend code. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error resending code:', error);
-      setError('An unexpected error occurred. Please try again.');
+    const result = await emailService.sendPasswordResetEmail(email, 'User');
+    
+    if (result.success) {
+      setSuccess('New password reset code sent to your email');
+      setTimeout(() => setSuccess(''), 3000);
+    } else {
+      setError(result.message);
     }
     
     setLoading(false);

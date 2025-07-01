@@ -8,7 +8,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; message: string; requires2FA?: boolean; userId?: string; requiresVerification?: boolean }>;
-  register: (email: string, password: string, username: string, fullName: string) => Promise<{ success: boolean; message: string; requiresVerification?: boolean }>;
+  register: (email: string, password: string, fullName: string, phone: string) => Promise<{ success: boolean; message: string; requiresVerification?: boolean }>;
   logout: () => void;
   updateUser: (updatedUser: User) => void;
 }
@@ -68,9 +68,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const restoreUserSession = () => {
     try {
-      // Check for PHP session cookie
-      const hasPHPSession = document.cookie.includes('PHPSESSID=');
-      
       // Check for token in localStorage (short-term session)
       const token = localStorage.getItem('token');
       
@@ -105,11 +102,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (currentUser) {
         console.log('✅ Session restored for user:', currentUser.email);
         setUser(currentUser);
-      } else if (hasPHPSession) {
-        // Try to restore from PHP session
-        console.log('🔍 Found PHP session, attempting to restore...');
-        // In a real app, you would make an API call to verify the session
-        // For now, we'll just log it
       } else {
         // Clear any invalid tokens
         localStorage.removeItem('token');
@@ -126,7 +118,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string, rememberMe = false) => {
     try {
       // Use backend API for login
-      const result = await authService.login(email, password, rememberMe);
+      const result = await authService.login(email, password);
       
       if (result.success && result.token && result.user) {
         // Store token in localStorage (current session)
@@ -176,10 +168,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const register = async (email: string, password: string, username: string, fullName: string) => {
+  const register = async (email: string, password: string, fullName: string, phone: string) => {
     try {
-      // Use backend API for registration
-      const result = await authService.register(email, password, username, fullName);
+      // 🚀 USE BACKEND API INSTEAD OF LOCALSTORAGE
+      const result = await authService.register(email, password, fullName, fullName);
       
       if (result.success) {
         // Also save to localStorage for compatibility
@@ -189,7 +181,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           id: result.userId || uuidv4(),
           email,
           full_name: fullName,
-          phone: '',
+          phone,
           role: 'user',
           is_verified: false,
           balance: 0, // NO default balance for new users
@@ -198,7 +190,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           assets: [],
           transactions: [],
           positions: [],
-          username: username,
+          username: fullName.toLowerCase().replace(/\s+/g, ''),
           twoFactorEnabled: false
         };
         
@@ -218,10 +210,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.removeItem('token');
     sessionStorage.removeItem('token');
     localStorage.removeItem('persistentToken');
-    
-    // Clear PHP session cookie
-    document.cookie = 'PHPSESSID=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    
     setUser(null);
   };
 
@@ -248,40 +236,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const getCurrentUser = (token: string): User | null => {
     try {
-      // For API-based authentication, extract user ID from token
-      // This is a simplified version - in production, you'd verify the token
-      const tokenParts = token.split('.');
-      if (tokenParts.length === 3) {
-        try {
-          // Try to parse as JWT
-          const payload = JSON.parse(atob(tokenParts[1]));
-          const userId = payload.userId;
-          
-          // Get user from localStorage
-          const users = JSON.parse(localStorage.getItem('fxgoldUsers') || '[]');
-          const user = users.find((u: User) => u.id === userId);
-          
-          if (user) {
-            // Ensure user has all required properties with defaults
-            return {
-              ...user,
-              balance: user.balance ?? 0, // No default balance
-              usdtBalance: user.usdtBalance ?? 0,
-              marginBalance: user.marginBalance ?? 0,
-              assets: user.assets ?? [],
-              transactions: user.transactions ?? [],
-              positions: user.positions ?? [],
-              username: user.username ?? user.full_name?.toLowerCase().replace(/\s+/g, ''),
-              twoFactorEnabled: user.twoFactorEnabled ?? false,
-              is_verified: user.is_verified ?? false
-            };
-          }
-        } catch (e) {
-          console.error('Error parsing token:', e);
-        }
-      }
-      
-      // Fallback to legacy token format
       const userId = token.replace('demo-token-', '');
       const users = JSON.parse(localStorage.getItem('fxgoldUsers') || '[]');
       const user = users.find((u: User) => u.id === userId);

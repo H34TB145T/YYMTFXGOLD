@@ -58,12 +58,10 @@ export const verifyToken = (token: string): { valid: boolean; userId?: string } 
 export const storeToken = (token: string, rememberMe = false): void => {
   if (rememberMe) {
     localStorage.setItem('token', token);
-    localStorage.setItem('persistentToken', token);
     sessionStorage.removeItem('token'); // Clear session storage to avoid conflicts
   } else {
     sessionStorage.setItem('token', token);
-    localStorage.setItem('token', token);
-    localStorage.removeItem('persistentToken'); // Clear persistent token to avoid conflicts
+    localStorage.removeItem('token'); // Clear local storage to avoid conflicts
   }
 };
 
@@ -80,7 +78,6 @@ export const getToken = (): string | null => {
 export const clearToken = (): void => {
   localStorage.removeItem('token');
   sessionStorage.removeItem('token');
-  localStorage.removeItem('persistentToken');
 };
 
 /**

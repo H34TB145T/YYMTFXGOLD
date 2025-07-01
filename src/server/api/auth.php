@@ -6,12 +6,6 @@ header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
-header('Access-Control-Allow-Credentials: true'); // Allow credentials
-
-// Set session cookie parameters for better persistence
-ini_set('session.cookie_lifetime', 86400 * 30); // 30 days
-ini_set('session.gc_maxlifetime', 86400 * 30); // 30 days
-session_start();
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
@@ -503,21 +497,6 @@ function handleLogin($input, $pdo, $emailService, $otpManager) {
             $stmt = $pdo->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
             $stmt->execute([$user['id']]);
             
-            // Set session variables
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['user_email'] = $user['email'];
-            $_SESSION['user_role'] = $user['role'];
-            
-            // If remember me is checked, set a persistent cookie
-            if ($rememberMe) {
-                $token = bin2hex(random_bytes(32));
-                setcookie('remember_token', $token, time() + 30 * 24 * 60 * 60, '/', '', true, true);
-                
-                // Store token in database (in a real app)
-                // For now, we'll just log it
-                error_log("Remember me token set for user: {$user['email']}");
-            }
-            
             // Check if 2FA is enabled
             if ($user['two_factor_enabled']) {
                 $otp = $emailService->generateOTP();
@@ -537,8 +516,9 @@ function handleLogin($input, $pdo, $emailService, $otpManager) {
                     echo json_encode(['success' => false, 'message' => 'Failed to send 2FA code']);
                 }
             } else {
-                // Generate JWT token (simplified for demo)
-                $token = base64_encode(json_encode(['userId' => $user['id'], 'exp' => time() + 3600 * 24 * 30])); // 30 days
+                // Generate JWT token with expiration based on remember me
+                $expiresIn = $rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60; // 30 days or 24 hours
+                $token = generateJWT($user['id'], $expiresIn);
                 
                 // Get complete user data with assets, transactions, and positions
                 $completeUserData = getUserCompleteData($pdo, $user['id']);
@@ -657,6 +637,7 @@ function handleVerify2FA($input, $pdo, $otpManager) {
     $email = $input['email'] ?? '';
     $otp = $input['otp'] ?? '';
     $userId = $input['userId'] ?? '';
+    $rememberMe = $input['rememberMe'] ?? false;
     
     if (empty($email) || empty($otp) || empty($userId)) {
         ob_clean();
@@ -666,12 +647,9 @@ function handleVerify2FA($input, $pdo, $otpManager) {
     }
     
     if ($otpManager->verifyOTP($email, $otp, '2fa')) {
-        // Generate JWT token with long expiration for persistence
-        $token = base64_encode(json_encode(['userId' => $userId, 'exp' => time() + 3600 * 24 * 30])); // 30 days
-        
-        // Set session variables
-        $_SESSION['user_id'] = $userId;
-        $_SESSION['user_email'] = $email;
+        // Generate JWT token with expiration based on remember me
+        $expiresIn = $rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60; // 30 days or 24 hours
+        $token = generateJWT($userId, $expiresIn);
         
         // Get complete user data with assets, transactions, and positions
         $completeUserData = getUserCompleteData($pdo, $userId);
