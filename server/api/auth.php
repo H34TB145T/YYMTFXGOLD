@@ -221,27 +221,6 @@ switch ($method) {
 // Rate limiting functions
 function isRateLimited($pdo, $ip, $action) {
     try {
-        // Check if table exists
-        $tableExists = false;
-        try {
-            $stmt = $pdo->query("SHOW TABLES LIKE 'login_attempts'");
-            $tableExists = $stmt->rowCount() > 0;
-        } catch (Exception $e) {
-            error_log("Error checking if login_attempts table exists: " . $e->getMessage());
-            return false; // Don't block on error
-        }
-        
-        if (!$tableExists) {
-            // Create table if it doesn't exist
-            $pdo->exec("CREATE TABLE IF NOT EXISTS login_attempts (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                ip_address VARCHAR(45) NOT NULL,
-                action VARCHAR(20) NOT NULL,
-                attempt_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                INDEX (ip_address, action, attempt_time)
-            )");
-        }
-        
         // Check if IP has too many attempts in the last hour
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM login_attempts WHERE ip_address = ? AND action = ? AND attempt_time > DATE_SUB(NOW(), INTERVAL 1 HOUR)");
         $stmt->execute([$ip, $action]);
@@ -805,7 +784,7 @@ function handleLogin($input, $pdo, $emailService, $otpManager) {
                     echo json_encode(['success' => false, 'message' => 'Failed to send 2FA code']);
                 }
             } else {
-                // Generate JWT token with long expiration for persistence
+                // Generate JWT token (simplified for demo)
                 $token = base64_encode(json_encode(['userId' => $user['id'], 'exp' => time() + 3600 * 24 * 30])); // 30 days
                 
                 // Get complete user data with assets, transactions, and positions
