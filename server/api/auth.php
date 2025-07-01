@@ -37,6 +37,31 @@ try {
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
+
+// Check if this is a session check request
+if ($method === 'GET' && isset($_GET['check_session'])) {
+    if (isset($_SESSION['user_id'])) {
+        $userId = $_SESSION['user_id'];
+        $userData = getUserCompleteData($pdo, $userId);
+        
+        if ($userData) {
+            ob_clean();
+            echo json_encode([
+                'success' => true,
+                'message' => 'Session active',
+                'user' => $userData
+            ]);
+        } else {
+            ob_clean();
+            echo json_encode(['success' => false, 'message' => 'Invalid session']);
+        }
+    } else {
+        ob_clean();
+        echo json_encode(['success' => false, 'message' => 'No active session']);
+    }
+    exit;
+}
+
 $input = json_decode(file_get_contents('php://input'), true);
 
 // Log the incoming request for debugging

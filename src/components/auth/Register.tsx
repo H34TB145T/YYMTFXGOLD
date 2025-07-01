@@ -67,7 +67,7 @@ const Register: React.FC = () => {
     }
     
     console.log('🚀 Starting registration process...');
-    const registerResult = await register(email, password, username, '');
+    const registerResult = await register(email, password, username, username);
     
     if (registerResult.success) {
       if (registerResult.requiresVerification) {

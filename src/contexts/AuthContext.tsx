@@ -72,8 +72,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const phpSessionId = document.cookie.match(/PHPSESSID=([^;]+)/);
       if (phpSessionId) {
         console.log('✅ PHP Session found:', phpSessionId[1]);
+        
+        // Check if PHP session is valid by making an API call
+        authService.checkSession().then(result => {
+          if (result.success && result.user) {
+            console.log('✅ PHP Session valid, user loaded:', result.user.email);
+            setUser(result.user);
+            setLoading(false);
+            return;
+          } else {
+            console.log('❌ PHP Session invalid or expired');
+            checkLocalStorageSession();
+          }
+        }).catch(() => {
+          checkLocalStorageSession();
+        });
+      } else {
+        checkLocalStorageSession();
       }
-      
+    } catch (error) {
+      console.error('Error restoring session:', error);
+      setLoading(false);
+    }
+  };
+  
+  const checkLocalStorageSession = () => {
+    try {
       // Check for token in localStorage (short-term session)
       const token = localStorage.getItem('token');
       
@@ -114,9 +138,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         sessionStorage.removeItem('token');
         localStorage.removeItem('persistentToken');
       }
+      
+      setLoading(false);
     } catch (error) {
-      console.error('Error restoring session:', error);
-    } finally {
+      console.error('Error checking local storage session:', error);
       setLoading(false);
     }
   };

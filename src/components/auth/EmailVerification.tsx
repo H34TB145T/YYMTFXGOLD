@@ -61,11 +61,11 @@ const EmailVerification: React.FC = () => {
       
       if (result.success) {
         // Update user verification status in localStorage
-        const users = JSON.parse(localStorage.getItem('freddyUsers') || '[]');
+        const users = JSON.parse(localStorage.getItem('fxgoldUsers') || '[]');
         const updatedUsers = users.map((u: any) => 
           u.email === email ? { ...u, is_verified: true } : u
         );
-        localStorage.setItem('freddyUsers', JSON.stringify(updatedUsers));
+        localStorage.setItem('fxgoldUsers', JSON.stringify(updatedUsers));
 
         setSuccess('Email verified successfully! Redirecting to login...');
         setTimeout(() => {
