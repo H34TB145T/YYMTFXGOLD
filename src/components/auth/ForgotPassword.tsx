@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { authService } from '../../services/authService';
-import { Mail, AlertCircle, CheckCircle, RefreshCw, Eye, EyeOff, Lock, Key } from 'lucide-react';
+import { Mail, AlertCircle, CheckCircle, RefreshCw, Eye, EyeOff, Lock } from 'lucide-react';
 
 const ForgotPassword: React.FC = () => {
   const [step, setStep] = useState<'email' | 'otp' | 'reset'>('email');

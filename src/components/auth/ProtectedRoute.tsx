@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import LoadingSpinner from '../common/LoadingSpinner';
 
@@ -10,18 +10,13 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   // Check authentication status when component mounts or updates
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      // Save the current location to redirect back after login
-      navigate('/login', { 
-        replace: true, 
-        state: { from: location.pathname } 
-      });
+      navigate('/login', { replace: true });
     }
-  }, [isAuthenticated, loading, navigate, location]);
+  }, [isAuthenticated, loading, navigate]);
 
   if (loading) {
     return (
@@ -32,7 +27,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;

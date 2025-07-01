@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import TwoFactorAuth from './TwoFactorAuth';
 import ForgotPasswordModal from './ForgotPasswordModal';
@@ -7,8 +7,6 @@ import { Wallet, AlertCircle, CheckCircle, Eye, EyeOff, Mail, Lock, Key, Refresh
 
 const Login: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const location = useLocation();
-  const from = (location.state as any)?.from || '/dashboard';
   const verified = searchParams.get('verified');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,9 +23,9 @@ const Login: React.FC = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated) {
-      navigate(from);
+      navigate('/dashboard');
     }
-  }, [isAuthenticated, navigate, from]);
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +54,7 @@ const Login: React.FC = () => {
         setTwoFAUserId(result.userId);
         setShow2FA(true);
       } else {
-        navigate(from);
+        navigate('/dashboard');
       }
     } else {
       if (result.requiresVerification) {
@@ -75,7 +73,7 @@ const Login: React.FC = () => {
 
   const handle2FASuccess = () => {
     setShow2FA(false);
-    navigate(from);
+    navigate('/dashboard');
   };
 
   const handle2FACancel = () => {
@@ -207,13 +205,13 @@ const Login: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading || !email || !password}
-                className="w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {loading ? (
-                  <>
+                  <div className="flex items-center">
                     <RefreshCw className="h-5 w-5 animate-spin mr-2" />
                     Signing in...
-                  </>
+                  </div>
                 ) : (
                   'Sign in'
                 )}

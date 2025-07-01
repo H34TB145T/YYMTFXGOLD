@@ -222,11 +222,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Clear PHP session cookie
     document.cookie = 'PHPSESSID=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
     
-    // Call the logout API endpoint
-    authService.logout().catch(error => {
-      console.error('Logout API error:', error);
-    });
-    
     setUser(null);
   };
 
