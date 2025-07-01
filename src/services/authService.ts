@@ -37,7 +37,12 @@ export const authService = {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const result = await response.json();
+      const responseText = await response.text();
+      if (!responseText) {
+        throw new Error("Received an empty response from the server. The backend script might have an error.");
+      }
+      
+      const result = JSON.parse(responseText);
       console.log('📧 Backend registration response:', result);
       
       return result;
@@ -45,7 +50,7 @@ export const authService = {
       console.error('❌ Registration API error:', error);
       return {
         success: false,
-        message: 'Registration failed. Please check your internet connection and try again.'
+        message: error instanceof Error ? error.message : 'Registration failed. Please check your internet connection and try again.'
       };
     }
   },
@@ -67,7 +72,12 @@ export const authService = {
         credentials: 'include' // Include cookies in the request
       });
 
-      const result = await response.json();
+      const responseText = await response.text();
+      if (!responseText) {
+        throw new Error("Received an empty response from the server. The backend script might have an error.");
+      }
+      
+      const result = JSON.parse(responseText);
       console.log('✅ Email verification response:', result);
       
       return result;
@@ -75,7 +85,7 @@ export const authService = {
       console.error('❌ Email verification error:', error);
       return {
         success: false,
-        message: 'Email verification failed. Please try again.'
+        message: error instanceof Error ? error.message : 'Email verification failed. Please try again.'
       };
     }
   },
@@ -96,7 +106,12 @@ export const authService = {
         credentials: 'include' // Include cookies in the request
       });
 
-      const result = await response.json();
+      const responseText = await response.text();
+      if (!responseText) {
+        throw new Error("Received an empty response from the server. The backend script might have an error.");
+      }
+      
+      const result = JSON.parse(responseText);
       console.log('📨 Resend verification response:', result);
       
       return result;
@@ -104,7 +119,7 @@ export const authService = {
       console.error('❌ Resend verification error:', error);
       return {
         success: false,
-        message: 'Failed to resend verification code. Please try again.'
+        message: error instanceof Error ? error.message : 'Failed to resend verification code. Please try again.'
       };
     }
   },
@@ -127,7 +142,12 @@ export const authService = {
         credentials: 'include' // Include cookies in the request
       });
 
-      const result = await response.json();
+      const responseText = await response.text();
+      if (!responseText) {
+        throw new Error("Received an empty response from the server. The backend script might have an error.");
+      }
+      
+      const result = JSON.parse(responseText);
       console.log('🔑 Backend login response:', result);
       
       return result;
@@ -135,7 +155,7 @@ export const authService = {
       console.error('❌ Login API error:', error);
       return {
         success: false,
-        message: 'Login failed. Please try again.'
+        message: error instanceof Error ? error.message : 'Login failed. Please try again.'
       };
     }
   },
@@ -153,13 +173,18 @@ export const authService = {
         credentials: 'include' // Include cookies in the request
       });
       
-      const result = await response.json();
+      const responseText = await response.text();
+      if (!responseText) {
+        throw new Error("Received an empty response from the server. The backend script might have an error.");
+      }
+      
+      const result = JSON.parse(responseText);
       return result;
     } catch (error) {
       console.error('❌ Logout error:', error);
       return {
         success: false,
-        message: 'Logout failed. Please try again.'
+        message: error instanceof Error ? error.message : 'Logout failed. Please try again.'
       };
     }
   },
@@ -178,13 +203,18 @@ export const authService = {
         credentials: 'include' // Include cookies in the request
       });
 
-      const result = await response.json();
+      const responseText = await response.text();
+      if (!responseText) {
+        throw new Error("Received an empty response from the server. The backend script might have an error.");
+      }
+      
+      const result = JSON.parse(responseText);
       return result;
     } catch (error) {
       console.error('❌ Forgot password error:', error);
       return {
         success: false,
-        message: 'Failed to send reset code. Please try again.'
+        message: error instanceof Error ? error.message : 'Failed to send reset code. Please try again.'
       };
     }
   },
@@ -205,13 +235,18 @@ export const authService = {
         credentials: 'include' // Include cookies in the request
       });
 
-      const result = await response.json();
+      const responseText = await response.text();
+      if (!responseText) {
+        throw new Error("Received an empty response from the server. The backend script might have an error.");
+      }
+      
+      const result = JSON.parse(responseText);
       return result;
     } catch (error) {
       console.error('❌ Reset password error:', error);
       return {
         success: false,
-        message: 'Password reset failed. Please try again.'
+        message: error instanceof Error ? error.message : 'Password reset failed. Please try again.'
       };
     }
   },
@@ -233,13 +268,18 @@ export const authService = {
         credentials: 'include' // Include cookies in the request
       });
 
-      const result = await response.json();
+      const responseText = await response.text();
+      if (!responseText) {
+        throw new Error("Received an empty response from the server. The backend script might have an error.");
+      }
+      
+      const result = JSON.parse(responseText);
       return result;
     } catch (error) {
       console.error('❌ 2FA verification error:', error);
       return {
         success: false,
-        message: '2FA verification failed. Please try again.'
+        message: error instanceof Error ? error.message : '2FA verification failed. Please try again.'
       };
     }
   },
@@ -259,13 +299,18 @@ export const authService = {
         credentials: 'include' // Include cookies in the request
       });
 
-      const result = await response.json();
+      const responseText = await response.text();
+      if (!responseText) {
+        throw new Error("Received an empty response from the server. The backend script might have an error.");
+      }
+      
+      const result = JSON.parse(responseText);
       return result;
     } catch (error) {
       console.error('❌ 2FA toggle error:', error);
       return {
         success: false,
-        message: 'Failed to update 2FA settings. Please try again.'
+        message: error instanceof Error ? error.message : 'Failed to update 2FA settings. Please try again.'
       };
     }
   },
@@ -285,13 +330,18 @@ export const authService = {
         credentials: 'include' // Include cookies in the request
       });
 
-      const result = await response.json();
+      const responseText = await response.text();
+      if (!responseText) {
+        throw new Error("Received an empty response from the server. The backend script might have an error.");
+      }
+      
+      const result = JSON.parse(responseText);
       return result;
     } catch (error) {
       console.error('❌ Update username error:', error);
       return {
         success: false,
-        message: 'Failed to update username. Please try again.'
+        message: error instanceof Error ? error.message : 'Failed to update username. Please try again.'
       };
     }
   },
@@ -312,13 +362,18 @@ export const authService = {
         credentials: 'include' // Include cookies in the request
       });
 
-      const result = await response.json();
+      const responseText = await response.text();
+      if (!responseText) {
+        throw new Error("Received an empty response from the server. The backend script might have an error.");
+      }
+      
+      const result = JSON.parse(responseText);
       return result;
     } catch (error) {
       console.error('❌ Change password error:', error);
       return {
         success: false,
-        message: 'Failed to change password. Please try again.'
+        message: error instanceof Error ? error.message : 'Failed to change password. Please try again.'
       };
     }
   },
@@ -331,13 +386,48 @@ export const authService = {
         credentials: 'include' // Include cookies in the request
       });
       
-      const result = await response.json();
+      const responseText = await response.text();
+      if (!responseText) {
+        throw new Error("Received an empty response from the server. The backend script might have an error.");
+      }
+      
+      const result = JSON.parse(responseText);
       return result;
     } catch (error) {
       console.error('❌ Session check error:', error);
       return {
         success: false,
-        message: 'Failed to check session'
+        message: error instanceof Error ? error.message : 'Failed to check session'
+      };
+    }
+  },
+  
+  async send2FA(data: { email: string; userName: string }): Promise<AuthResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth.php`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'send_2fa',
+          ...data
+        }),
+        credentials: 'include' // Include cookies in the request
+      });
+
+      const responseText = await response.text();
+      if (!responseText) {
+        throw new Error("Received an empty response from the server. The backend script might have an error.");
+      }
+      
+      const result = JSON.parse(responseText);
+      return result;
+    } catch (error) {
+      console.error('❌ Send 2FA error:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to send 2FA code. Please try again.'
       };
     }
   }

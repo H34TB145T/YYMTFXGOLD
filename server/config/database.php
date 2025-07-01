@@ -70,6 +70,14 @@ try {
                     }
                     return new MySQLiResultWrapper($result);
                 }
+                
+                public function exec($sql) {
+                    $result = $this->mysqli->query($sql);
+                    if ($result === false) {
+                        throw new Exception($this->mysqli->error);
+                    }
+                    return $this->mysqli->affected_rows;
+                }
             }
             
             class MySQLiStatementWrapper {
@@ -116,6 +124,19 @@ try {
                     }
                     return $result->fetch_all(MYSQLI_ASSOC);
                 }
+                
+                public function fetchColumn() {
+                    $result = $this->stmt->get_result();
+                    if (!$result) {
+                        return false;
+                    }
+                    $row = $result->fetch_array(MYSQLI_NUM);
+                    return $row ? $row[0] : false;
+                }
+                
+                public function rowCount() {
+                    return $this->stmt->affected_rows;
+                }
             }
             
             class MySQLiResultWrapper {
@@ -131,6 +152,11 @@ try {
                 
                 public function fetchAll() {
                     return $this->result->fetch_all(MYSQLI_ASSOC);
+                }
+                
+                public function fetchColumn() {
+                    $row = $this->result->fetch_array(MYSQLI_NUM);
+                    return $row ? $row[0] : false;
                 }
             }
             
