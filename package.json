@@ -1,5 +1,5 @@
 {
-  "name": "freddys-crypto-trading",
+  "name": "fxgold-trading",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.39.7",
     "axios": "^1.6.7",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
