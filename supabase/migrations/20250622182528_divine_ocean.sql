@@ -10,7 +10,6 @@
 */
 
 -- Set up database encoding
-SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- Use the correct database
