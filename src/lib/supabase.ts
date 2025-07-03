@@ -3,7 +3,7 @@ import { Database } from '../types/supabase';
 
 // Supabase connection details
 const supabaseUrl = 'https://fngvivaphqjleshemsse.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZuZ3ZpdmFwaHFqbGVzaGVtc3NlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjA2MzA0MDAsImV4cCI6MjAzNjIwNjQwMH0.YOUR_ANON_KEY'; // Replace with your actual anon key
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZuZ3ZpdmFwaHFqbGVzaGVtc3NlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1NjEzNDQsImV4cCI6MjA2NzEzNzM0NH0.0la8gW_wijxWIRdUXwzeaIcnZzbGiy0Xyt634me8LZ8'; // Replace with your actual anon key
 
 // Create Supabase client
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
