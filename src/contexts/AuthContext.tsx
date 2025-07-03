@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types';
-import { supabase, getUserProfile, getUserAssets, getUserTransactions, getUserPositions } from '../lib/supabase';
+import { authService } from '../services/authService';
 import { v4 as uuidv4 } from 'uuid';
 
 interface AuthContextType {
@@ -32,416 +32,274 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is authenticated with Supabase
-    const checkAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session) {
-          const { data: { user: authUser } } = await supabase.auth.getUser();
-          
-          if (authUser) {
-            // Get user profile data
-            const profile = await getUserProfile(authUser.id);
-            
-            if (profile) {
-              // Get user assets, transactions, and positions
-              const assets = await getUserAssets(authUser.id);
-              const transactions = await getUserTransactions(authUser.id);
-              const positions = await getUserPositions(authUser.id);
-              
-              // Create complete user object
-              const completeUser: User = {
-                id: profile.id,
-                email: profile.email,
-                full_name: profile.full_name,
-                phone: profile.phone || '',
-                role: profile.role,
-                is_verified: profile.is_verified,
-                balance: profile.balance,
-                usdtBalance: profile.usdt_balance,
-                marginBalance: profile.margin_balance,
-                assets: assets.map(asset => ({
-                  coinId: asset.coin_id,
-                  symbol: asset.symbol,
-                  name: asset.name,
-                  amount: asset.amount,
-                  purchasePrice: asset.purchase_price
-                })),
-                transactions: transactions.map(tx => ({
-                  id: tx.id,
-                  coinId: tx.coin_id,
-                  coinName: tx.coin_name,
-                  coinSymbol: tx.coin_symbol,
-                  amount: tx.amount,
-                  price: tx.price,
-                  total: tx.total,
-                  type: tx.type as any,
-                  status: tx.status,
-                  walletAddress: tx.wallet_address || undefined,
-                  timestamp: new Date(tx.timestamp).getTime()
-                })),
-                positions: positions.map(pos => ({
-                  id: pos.id,
-                  coinId: pos.coin_id,
-                  coinName: pos.coin_name,
-                  coinSymbol: pos.coin_symbol,
-                  type: pos.type as 'long' | 'short',
-                  leverage: pos.leverage,
-                  size: pos.size,
-                  entryPrice: pos.entry_price,
-                  liquidationPrice: pos.liquidation_price,
-                  margin: pos.margin,
-                  pnl: pos.pnl,
-                  isOpen: pos.is_open,
-                  timestamp: new Date(pos.timestamp).getTime()
-                })),
-                username: profile.username,
-                twoFactorEnabled: profile.two_factor_enabled,
-                wallet_address: profile.wallet_address
-              };
-              
-              setUser(completeUser);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error checking auth:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Initialize admin user if not exists
+    initializeAdminUser();
     
-    checkAuth();
-    
-    // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        // User signed in, update user state
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        
-        if (authUser) {
-          // Get user profile data
-          const profile = await getUserProfile(authUser.id);
-          
-          if (profile) {
-            // Get user assets, transactions, and positions
-            const assets = await getUserAssets(authUser.id);
-            const transactions = await getUserTransactions(authUser.id);
-            const positions = await getUserPositions(authUser.id);
-            
-            // Create complete user object
-            const completeUser: User = {
-              id: profile.id,
-              email: profile.email,
-              full_name: profile.full_name,
-              phone: profile.phone || '',
-              role: profile.role,
-              is_verified: profile.is_verified,
-              balance: profile.balance,
-              usdtBalance: profile.usdt_balance,
-              marginBalance: profile.margin_balance,
-              assets: assets.map(asset => ({
-                coinId: asset.coin_id,
-                symbol: asset.symbol,
-                name: asset.name,
-                amount: asset.amount,
-                purchasePrice: asset.purchase_price
-              })),
-              transactions: transactions.map(tx => ({
-                id: tx.id,
-                coinId: tx.coin_id,
-                coinName: tx.coin_name,
-                coinSymbol: tx.coin_symbol,
-                amount: tx.amount,
-                price: tx.price,
-                total: tx.total,
-                type: tx.type as any,
-                status: tx.status,
-                walletAddress: tx.wallet_address || undefined,
-                timestamp: new Date(tx.timestamp).getTime()
-              })),
-              positions: positions.map(pos => ({
-                id: pos.id,
-                coinId: pos.coin_id,
-                coinName: pos.coin_name,
-                coinSymbol: pos.coin_symbol,
-                type: pos.type as 'long' | 'short',
-                leverage: pos.leverage,
-                size: pos.size,
-                entryPrice: pos.entry_price,
-                liquidationPrice: pos.liquidation_price,
-                margin: pos.margin,
-                pnl: pos.pnl,
-                isOpen: pos.is_open,
-                timestamp: new Date(pos.timestamp).getTime()
-              })),
-              username: profile.username,
-              twoFactorEnabled: profile.two_factor_enabled,
-              wallet_address: profile.wallet_address
-            };
-            
-            setUser(completeUser);
-          }
-        }
-      } else if (event === 'SIGNED_OUT') {
-        // User signed out, clear user state
-        setUser(null);
-      }
-    });
-    
-    return () => {
-      subscription.unsubscribe();
-    };
+    // Try to restore user session
+    restoreUserSession();
   }, []);
+
+  const initializeAdminUser = () => {
+    const users = JSON.parse(localStorage.getItem('fxgoldUsers') || '[]');
+    const adminExists = users.some((u: User) => u.email === 'admin@fxgold.shop');
+    
+    if (!adminExists) {
+      const adminUser: User = {
+        id: 'admin-fxgold-2024',
+        email: 'admin@fxgold.shop',
+        full_name: 'FxGold Administrator',
+        phone: '',
+        role: 'admin',
+        is_verified: true,
+        balance: 0, // No default balance for admin
+        usdtBalance: 0,
+        marginBalance: 0,
+        assets: [],
+        transactions: [],
+        positions: [],
+        username: 'fxgoldadmin',
+        twoFactorEnabled: false
+      };
+      
+      users.push(adminUser);
+      localStorage.setItem('fxgoldUsers', JSON.stringify(users));
+    }
+  };
+
+  const restoreUserSession = () => {
+    try {
+      // First check PHP session
+      const phpSessionId = document.cookie.match(/PHPSESSID=([^;]+)/);
+      if (phpSessionId) {
+        console.log('✅ PHP Session found:', phpSessionId[1]);
+        
+        // Check if PHP session is valid by making an API call
+        authService.checkSession().then(result => {
+          if (result.success && result.user) {
+            console.log('✅ PHP Session valid, user loaded:', result.user.email);
+            setUser(result.user);
+            setLoading(false);
+            return;
+          } else {
+            console.log('❌ PHP Session invalid or expired');
+            checkLocalStorageSession();
+          }
+        }).catch(() => {
+          checkLocalStorageSession();
+        });
+      } else {
+        checkLocalStorageSession();
+      }
+    } catch (error) {
+      console.error('Error restoring session:', error);
+      setLoading(false);
+    }
+  };
+  
+  const checkLocalStorageSession = () => {
+    try {
+      // Check for token in localStorage (short-term session)
+      const token = localStorage.getItem('token');
+      
+      // Check for persistent token in sessionStorage (browser session)
+      const sessionToken = sessionStorage.getItem('token');
+      
+      // Check for persistent token in localStorage (remember me)
+      const persistentToken = localStorage.getItem('persistentToken');
+      
+      let currentUser = null;
+      
+      if (token) {
+        // Regular session token
+        currentUser = getCurrentUser(token);
+      } else if (sessionToken) {
+        // Browser session token
+        currentUser = getCurrentUser(sessionToken);
+        // Store in localStorage for current session
+        if (currentUser) {
+          localStorage.setItem('token', sessionToken);
+        }
+      } else if (persistentToken) {
+        // Persistent login (remember me)
+        currentUser = getCurrentUser(persistentToken);
+        // Store in both storages
+        if (currentUser) {
+          localStorage.setItem('token', persistentToken);
+          sessionStorage.setItem('token', persistentToken);
+        }
+      }
+      
+      if (currentUser) {
+        console.log('✅ Session restored for user:', currentUser.email);
+        setUser(currentUser);
+      } else {
+        // Clear any invalid tokens
+        localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
+        localStorage.removeItem('persistentToken');
+      }
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('Error checking local storage session:', error);
+      setLoading(false);
+    }
+  };
 
   const login = async (email: string, password: string, rememberMe = false) => {
     try {
-      // First check if user exists in the database
-      const { data: userExists } = await supabase
-        .from('users')
-        .select('id, is_verified, two_factor_enabled')
-        .eq('email', email)
-        .single();
+      // Use backend API for login
+      const result = await authService.login(email, password, rememberMe);
       
-      if (!userExists) {
-        return { success: false, message: 'Invalid email or password' };
-      }
-      
-      // Check if user is verified
-      if (!userExists.is_verified) {
-        return { 
-          success: false, 
-          message: 'Please verify your email first', 
-          requiresVerification: true 
-        };
-      }
-      
-      // Sign in with Supabase Auth
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      if (error) {
-        return { success: false, message: error.message };
-      }
-      
-      // Check if 2FA is enabled
-      if (userExists.two_factor_enabled) {
-        // Generate and send 2FA code
-        const { data: otpData, error: otpError } = await supabase
-          .from('otp_codes')
-          .insert({
-            email,
-            otp: Math.floor(100000 + Math.random() * 900000).toString(),
-            type: '2fa',
-            expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 minutes
-          })
-          .select()
-          .single();
+      if (result.success && result.token && result.user) {
+        // Store token in localStorage (current session)
+        localStorage.setItem('token', result.token);
         
-        if (otpError) {
-          return { success: false, message: 'Failed to generate 2FA code' };
+        // Store token in sessionStorage (browser session)
+        sessionStorage.setItem('token', result.token);
+        
+        // If remember me is checked, store persistent token
+        if (rememberMe) {
+          localStorage.setItem('persistentToken', result.token);
         }
         
-        // In a real app, you would send this code via email
-        console.log('2FA code:', otpData.otp);
-        
-        return {
-          success: true,
-          requires2FA: true,
-          message: '2FA code sent to your email',
-          userId: userExists.id
+        // Ensure user has all required properties with defaults
+        const completeUser: User = {
+          ...result.user,
+          assets: result.user.assets || [],
+          transactions: result.user.transactions || [],
+          positions: result.user.positions || [],
+          balance: result.user.balance || 0, // No default balance
+          usdtBalance: result.user.usdtBalance || 0,
+          marginBalance: result.user.marginBalance || 0,
+          username: result.user.username || result.user.full_name?.toLowerCase().replace(/\s+/g, ''),
+          twoFactorEnabled: result.user.twoFactorEnabled || false
         };
+        
+        setUser(completeUser);
+        
+        // Also update localStorage for compatibility
+        const users = JSON.parse(localStorage.getItem('fxgoldUsers') || '[]');
+        const updatedUsers = users.map((u: User) => 
+          u.email === email ? { ...u, ...completeUser } : u
+        );
+        
+        // If user doesn't exist in localStorage, add them
+        if (!users.some((u: User) => u.email === email)) {
+          updatedUsers.push(completeUser);
+        }
+        
+        localStorage.setItem('fxgoldUsers', JSON.stringify(updatedUsers));
       }
       
-      // Get user profile data
-      const profile = await getUserProfile(data.user!.id);
-      
-      if (!profile) {
-        return { success: false, message: 'Failed to load user profile' };
-      }
-      
-      // Get user assets, transactions, and positions
-      const assets = await getUserAssets(data.user!.id);
-      const transactions = await getUserTransactions(data.user!.id);
-      const positions = await getUserPositions(data.user!.id);
-      
-      // Create complete user object
-      const completeUser: User = {
-        id: profile.id,
-        email: profile.email,
-        full_name: profile.full_name,
-        phone: profile.phone || '',
-        role: profile.role,
-        is_verified: profile.is_verified,
-        balance: profile.balance,
-        usdtBalance: profile.usdt_balance,
-        marginBalance: profile.margin_balance,
-        assets: assets.map(asset => ({
-          coinId: asset.coin_id,
-          symbol: asset.symbol,
-          name: asset.name,
-          amount: asset.amount,
-          purchasePrice: asset.purchase_price
-        })),
-        transactions: transactions.map(tx => ({
-          id: tx.id,
-          coinId: tx.coin_id,
-          coinName: tx.coin_name,
-          coinSymbol: tx.coin_symbol,
-          amount: tx.amount,
-          price: tx.price,
-          total: tx.total,
-          type: tx.type as any,
-          status: tx.status,
-          walletAddress: tx.wallet_address || undefined,
-          timestamp: new Date(tx.timestamp).getTime()
-        })),
-        positions: positions.map(pos => ({
-          id: pos.id,
-          coinId: pos.coin_id,
-          coinName: pos.coin_name,
-          coinSymbol: pos.coin_symbol,
-          type: pos.type as 'long' | 'short',
-          leverage: pos.leverage,
-          size: pos.size,
-          entryPrice: pos.entry_price,
-          liquidationPrice: pos.liquidation_price,
-          margin: pos.margin,
-          pnl: pos.pnl,
-          isOpen: pos.is_open,
-          timestamp: new Date(pos.timestamp).getTime()
-        })),
-        username: profile.username,
-        twoFactorEnabled: profile.two_factor_enabled,
-        wallet_address: profile.wallet_address
-      };
-      
-      setUser(completeUser);
-      
-      return { 
-        success: true, 
-        message: 'Login successful'
-      };
+      return result;
     } catch (error) {
       console.error('Login error:', error);
-      return { success: false, message: 'Login failed. Please try again.' };
+      return { success: false, message: 'Login failed' };
     }
   };
 
   const register = async (email: string, password: string, username: string, fullName: string) => {
     try {
-      // Check if email or username already exists
-      const { data: existingUser, error: checkError } = await supabase
-        .from('users')
-        .select('id')
-        .or(`email.eq.${email},username.eq.${username}`)
-        .single();
+      // 🚀 USE BACKEND API INSTEAD OF LOCALSTORAGE
+      const result = await authService.register(email, password, username, fullName);
       
-      if (existingUser) {
-        return { success: false, message: 'Email or username already exists' };
-      }
-      
-      // Sign up with Supabase Auth
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password
-      });
-      
-      if (error) {
-        return { success: false, message: error.message };
-      }
-      
-      if (!data.user) {
-        return { success: false, message: 'Registration failed' };
-      }
-      
-      // Create user profile in the database
-      const { error: insertError } = await supabase
-        .from('users')
-        .insert({
-          id: data.user.id,
+      if (result.success) {
+        // Also save to localStorage for compatibility
+        const users = JSON.parse(localStorage.getItem('fxgoldUsers') || '[]');
+        
+        const newUser: User = {
+          id: result.userId || uuidv4(),
           email,
-          username,
-          password: 'hashed_in_backend', // In a real app, password would be hashed in the backend
           full_name: fullName,
+          phone: '',
           role: 'user',
           is_verified: false,
-          balance: 0,
-          usdt_balance: 0,
-          margin_balance: 0
-        });
-      
-      if (insertError) {
-        return { success: false, message: insertError.message };
+          balance: 0, // NO default balance for new users
+          usdtBalance: 0,
+          marginBalance: 0,
+          assets: [],
+          transactions: [],
+          positions: [],
+          username: username,
+          twoFactorEnabled: false
+        };
+        
+        users.push(newUser);
+        localStorage.setItem('fxgoldUsers', JSON.stringify(users));
       }
       
-      // Generate and store OTP for email verification
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      
-      const { error: otpError } = await supabase
-        .from('otp_codes')
-        .insert({
-          email,
-          otp,
-          type: 'verification',
-          expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minutes
-        });
-      
-      if (otpError) {
-        return { success: false, message: 'Failed to generate verification code' };
-      }
-      
-      // In a real app, you would send this code via email
-      console.log('Verification OTP:', otp);
-      
-      return { 
-        success: true, 
-        message: 'Registration successful! Please check your email for verification code.',
-        requiresVerification: true
-      };
+      return result;
     } catch (error) {
       console.error('Registration error:', error);
-      return { success: false, message: 'Registration failed. Please try again.' };
+      return { success: false, message: 'Registration failed' };
     }
   };
 
-  const logout = async () => {
-    try {
-      await supabase.auth.signOut();
-      setUser(null);
-    } catch (error) {
+  const logout = () => {
+    // Clear all tokens
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
+    localStorage.removeItem('persistentToken');
+    
+    // Clear PHP session
+    document.cookie = "PHPSESSID=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    
+    setUser(null);
+    
+    // Call logout API endpoint
+    authService.logout().catch(error => {
       console.error('Logout error:', error);
-    }
+    });
   };
 
-  const updateUser = async (updatedUser: User) => {
+  const updateUser = (updatedUser: User) => {
+    // Ensure updated user has all required properties
+    const completeUpdatedUser: User = {
+      ...updatedUser,
+      assets: updatedUser.assets || [],
+      transactions: updatedUser.transactions || [],
+      positions: updatedUser.positions || [],
+      balance: updatedUser.balance || 0, // No default balance
+      usdtBalance: updatedUser.usdtBalance || 0,
+      marginBalance: updatedUser.marginBalance || 0,
+      username: updatedUser.username || updatedUser.full_name?.toLowerCase().replace(/\s+/g, ''),
+      twoFactorEnabled: updatedUser.twoFactorEnabled || false
+    };
+    
+    setUser(completeUpdatedUser);
+    
+    const users = JSON.parse(localStorage.getItem('fxgoldUsers') || '[]');
+    const updatedUsers = users.map((u: User) => u.id === completeUpdatedUser.id ? completeUpdatedUser : u);
+    localStorage.setItem('fxgoldUsers', JSON.stringify(updatedUsers));
+  };
+
+  const getCurrentUser = (token: string): User | null => {
     try {
-      // Update user profile in the database
-      const { error } = await supabase
-        .from('users')
-        .update({
-          username: updatedUser.username,
-          full_name: updatedUser.full_name,
-          phone: updatedUser.phone,
-          balance: updatedUser.balance,
-          usdt_balance: updatedUser.usdtBalance,
-          margin_balance: updatedUser.marginBalance,
-          wallet_address: updatedUser.wallet_address,
-          two_factor_enabled: updatedUser.twoFactorEnabled
-        })
-        .eq('id', updatedUser.id);
+      const userId = token.replace('demo-token-', '');
+      const users = JSON.parse(localStorage.getItem('fxgoldUsers') || '[]');
+      const user = users.find((u: User) => u.id === userId);
       
-      if (error) {
-        console.error('Error updating user:', error);
-        return;
+      if (user) {
+        // Ensure user has all required properties with defaults
+        return {
+          ...user,
+          balance: user.balance ?? 0, // No default balance
+          usdtBalance: user.usdtBalance ?? 0,
+          marginBalance: user.marginBalance ?? 0,
+          assets: user.assets ?? [],
+          transactions: user.transactions ?? [],
+          positions: user.positions ?? [],
+          username: user.username ?? user.full_name?.toLowerCase().replace(/\s+/g, ''),
+          twoFactorEnabled: user.twoFactorEnabled ?? false,
+          is_verified: user.is_verified ?? false
+        };
       }
       
-      setUser(updatedUser);
+      return null;
     } catch (error) {
-      console.error('Update user error:', error);
+      console.error('Get current user error:', error);
+      return null;
     }
   };
 
